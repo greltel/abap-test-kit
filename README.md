@@ -1,87 +1,239 @@
 # ABAP Test Kit
+[![ABAP Cloud](https://img.shields.io/badge/ABAP-Cloud%20Ready-green)](https://abaplint.app/stats/greltel/abap-test-kit/object_classifications)
+[![ABAP Version](https://img.shields.io/badge/ABAP-7.58%2B-blue)](https://abaplint.app/stats/greltel/abap-test-kit/statement_compatibility)
+[![Code Statistics](https://img.shields.io/badge/CodeStatistics-abaplint-blue)](https://abaplint.app/stats/greltel/abap-test-kit)
+[![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/greltel/abap-test-kit/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/greltel/abap-test-kit?label=release)](https://github.com/greltel/abap-test-kit/releases)
+[![abaplint](https://github.com/greltel/abap-test-kit/actions/workflows/abaplint.yml/badge.svg)](https://github.com/greltel/abap-test-kit/actions/workflows/abaplint.yml)
+# Table of contents
 
-**ABAP Unit made readable: test doubles that read like sentences, for your first test and your thousandth.**
+1. [ABAP Test Kit](#abap-test-kit)
+2. [Prerequisites](#prerequisites)
+3. [Installation](#installation)
+4. [Versioning](#versioning)
+5. [License](#license)
+6. [Contributors-Developers](#contributors-developers)
+7. [Available Test Doubles](#available-test-doubles)
+8. [Before and After](#before-and-after)
+9. [Design Goals-Features](#design-goals-features)
+10. [To-Do](#to-do)
 
-ABAP Test Kit (ATK) sits on top of SAP's ABAP Test Double Framework (`CL_ABAP_TESTDOUBLE`).
-It keeps what the framework does well and replaces the parts that make tests hard to write,
-hard to read and hard to debug.
+# ABAP Test Kit
 
-- **New to ABAP Unit?** Write your first test double without learning the framework's traps
-  first. When something is wrong, the message tells you what and how to fix it.
-- **Already writing tests?** Write fewer statements, keep arrange-act-assert in its natural
-  order, and get failure messages that point at the argument that differs.
+A small library that makes ABAP Unit tests with test doubles shorter and easier to read, for
+development on SAP S/4HANA and SAP BTP ABAP Environment.
+
+It is built on top of SAP's ABAP Test Double Framework (`CL_ABAP_TESTDOUBLE`): the framework
+still creates the doubles and intercepts the calls, the library adds a fluent API to configure
+and check them, and messages that say what went wrong and how to fix it. It is meant both for
+developers who write their first unit test and for those who want their tests shorter and more
+descriptive.
+
+The library is written against the **ABAP for Cloud Development** language version, follows
+**Clean Core** principles, and consumes **released APIs only**.
+
+# Prerequisites
+
+* SAP S/4HANA 2023 (or higher) OR SAP BTP ABAP Environment
+* ABAP language version: ABAP for Cloud Development
+* ABAP Test Double Framework (`CL_ABAP_TESTDOUBLE`)
+* Statement compatibility from v758 and Cloud
+
+# Installation
+
+Install via [abapGit](https://abapgit.org) into a package flagged as
+**ABAP Cloud** in the customer namespace, e.g. `ZATK`. abapGit creates two
+sub-packages next to the library:
+
+| Package | Content |
+|---|---|
+| `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
+| `ZATK_TEST` | Fixtures for the unit tests of the library |
+| `ZATK_DEMO` | A small order service, tested once with the classic framework and once with the library |
+
+After the pull, run the unit tests of the package; all of them should pass.
+`ZCL_ATK` is a test class (`FOR TESTING`), so only test code can use it.
+
+# Versioning
+
+Releases are tagged `vMAJOR.MINOR.PATCH` and listed in
+[CHANGELOG.md](CHANGELOG.md), which also carries the changes on `main` that are
+not released yet under **Unreleased**. One version covers the whole
+repository: in abapGit open the repository, choose *Switch tag* and pick the
+release; *Switch branch* to `main` follows the latest state. The rules for what
+bumps which part of the version are in [CONTRIBUTING.md](CONTRIBUTING.md#releasing).
+
+# License
+
+This project is licensed under the [MIT License](https://github.com/greltel/abap-test-kit/blob/main/LICENSE).
+
+# Contributors-Developers
+
+The repository was created by [George Drakos](https://www.linkedin.com/in/george-drakos/).
+
+# Available Test Doubles
+
+Object names follow `ZCL_ATK` / `ZIF_ATK_*` / `ZCX_ATK`.
+
+| Double | Entry point | Interface | Description |
+|---|---|---|---|
+| [Dummy](#dummy) | `zcl_atk=>dummy( )` | `ZIF_ATK_DUMMY` | Fills a parameter of the code under test that the scenario never uses; any call fails the test |
+| [Stub](#stub) | `zcl_atk=>stub( )` | `ZIF_ATK_STUB` | Answers calls with the values, output parameters or exceptions the test defines |
+| [Spy](#spy) | `zcl_atk=>spy( )` | `ZIF_ATK_SPY` | A stub that records every call, so the test checks the calls after the act step |
+| [Mock](#mock) | `zcl_atk=>mock( )` | `ZIF_ATK_MOCK` | Strict double: every call is declared up front, any other call fails at once |
+
+Every double follows the same shape: `ZCL_ATK` is the only entry point and takes
+the name of a global interface, or of a global class that is not final, not
+`CREATE PRIVATE` and has no mandatory constructor parameters. Public instance
+methods that are not final can be configured; static, final and private
+methods cannot be doubled by the test double framework. `instance( )`
+hands out the object that is injected into the code under test. Rules and
+checks are fluent interfaces, method names, parameter names and values are
+checked against the doubled type while the test is set up, and errors surface
+through one exception class, `ZCX_ATK`.
+
+## Dummy
+
+The code under test needs the collaborator, for example as a constructor
+parameter, but the scenario never calls it. Any call fails the test and names
+the method that was called.
+
+| Interface | Purpose |
+|---|---|
+| `ZIF_ATK_DUMMY` | `instance( )` |
 
 ```abap
-" Classic ABAP Test Double Framework
-cl_abap_testdouble=>configure_call( audit_log )->and_expect( )->is_called_times( 1 ).
-audit_log->write( order_id = '4711' action = `CANCELLED` ).   " not a real call - it only records
-cut->cancel( '4711' ).
-cl_abap_testdouble=>verify_expectations( audit_log ).
+DATA(unused_log) = zcl_atk=>dummy( 'ZIF_AUDIT_LOG' ).
 
-" ABAP Test Kit
-cut->cancel( '4711' ).
-audit_log->was_called( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` )->times( 1 ).
+cut = NEW zcl_order_service( repository = CAST #( repository->instance( ) )
+                             audit_log  = CAST #( unused_log->instance( ) ) ).
 ```
 
-> **Status:** version 0.1.0 (test doubles). The code passes abaplint in ABAP Cloud mode and
-> ships with its own unit tests; the first activation on a real system is in progress - see
-> [First run](#first-run-on-a4h).
+## Stub
 
-## Contents
+Answers the questions of the code under test. `when( )` starts a rule for one
+method, `with( )` narrows it to an argument value, and `returns( )`, `sets( )`
+or `raises( )` define the answer; `sets( )` covers EXPORTING and CHANGING
+parameters alike. Parameters without `with( )` match any value. When several
+rules match a call, the one with the most `with( )` conditions wins, on a tie
+the one written last. Once a method has rules, a call that matches none of them
+fails the test; a method without rules returns initial values. Values are
+converted to the type of the parameter without loss: `'4711'` for a numeric
+text becomes `0000004711`, while `'47A1'`, a text longer than the parameter or
+decimals that would be rounded are rejected. `raises( )` accepts only exceptions
+the method declares, or `CX_NO_CHECK` ones.
 
-- [What you gain](#what-you-gain)
-- [Before and after, scenario by scenario](#before-and-after-scenario-by-scenario)
-- [Questions experienced developers ask](#questions-experienced-developers-ask)
-- [Install](#install)
-- [First run on A4H](#first-run-on-a4h)
-- [Guide](#guide)
-- [How it works inside](#how-it-works-inside)
-- [Limitations](#limitations)
-- [Objects](#objects)
-- [Development](#development)
-- [Roadmap](#roadmap)
-
-## What you gain
-
-Measured on the demo package `ZATK_DEMO`, where every scenario below exists twice, once per
-style, and both versions pass:
-
-| | Classic ATDF | ABAP Test Kit |
-|---|---|---|
-| Statements to set up and check doubles in the 4 shared scenarios | 14 | 6 |
-| Lines that look like real calls but only record arguments | 6 | 0 |
-| Where call checks are written | before the act step, then `verify_expectations( )` | after the act step, like every other assertion |
-| A call with arguments no configuration matches | returns initial values, silently | fails the test and shows the actual arguments |
-| A check that fails because one argument differs | reports the unmet expectation | also shows the closest actual call and the parameter that differs |
-| EXPORTING and CHANGING parameters | `set_parameter( )`, and the recording call must not receive them | `sets( )` for both |
-| A value that does not fit the parameter, e.g. `'47A1'` for a numeric text | converted by the usual ABAP rules | rejected with a message, before the test runs the code |
-| A misspelled method or parameter name | compile error (the recording call is real code) | message with a suggestion: "Did you mean GET_ORDER?" |
-| Errors of the framework itself | `CX_ATD_EXCEPTION` | `ZCX_ATK`: what went wrong, how to fix it |
-
-The last-but-one row is the honest trade-off: ATDF catches a misspelled name when you
-activate, ATK catches it the first time the test runs (see the [questions](#questions-experienced-developers-ask)).
-
-## Before and after, scenario by scenario
-
-All examples test the same small class, `ZCL_ATK_DEMO_ORDER_SERVICE`: it reads an order from a
-repository and, when it cancels an open order, writes the cancellation to an audit log. Both
-collaborators are injected through the constructor.
+| Interface | Purpose |
+|---|---|
+| `ZIF_ATK_STUB` | `instance( )`, `when( )` |
+| `ZIF_ATK_CALL_RULE` | Fluent: `with( )`, `returns( )`, `sets( )`, `raises( )` |
 
 ```abap
-" Classic: create the doubles and inject them
+DATA(repository) = zcl_atk=>stub( 'ZIF_ORDER_REPOSITORY' ).
+
+repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '4711' )->returns( open_order ).
+repository->when( 'GET_ORDER' )->returns( unknown_order ).
+
+repository->when( 'READ_TOTALS' )->sets( parameter = 'NET' value = 100 )->sets( parameter = 'TAX' value = 24 ).
+
+repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '0000' )->raises( NEW zcx_order_not_found( ) ).
+```
+
+## Spy
+
+A stub that also records every call. The test checks the calls after the act
+step with `was_called( )`, narrows the check with `with( )` and closes it with
+`times( )`, which performs the check - `times( 0 )` and `was_not_called( )`
+both check that no matching call happened. A failed check shows the expected
+arguments, the closest actual call and the parameters that differ.
+
+| Interface | Purpose |
+|---|---|
+| `ZIF_ATK_SPY` | `instance( )`, `when( )`, `was_called( )`, `was_not_called( )` |
+| `ZIF_ATK_CALL_VERIFICATION` | Fluent: `with( )`, closed with `times( )` |
+
+```abap
+DATA(audit_log) = zcl_atk=>spy( 'ZIF_AUDIT_LOG' ).
+
+cut->cancel( '4711' ).
+
+audit_log->was_called( 'WRITE'
+  )->with( parameter = 'ORDER_ID' value = '4711'
+  )->with( parameter = 'ACTION' value = `CANCELLED`
+  )->times( 1 ).
+
+audit_log->was_not_called( 'DELETE' ).
+```
+
+```text
+WRITE: expected 1 matching call(s), but found 0. Check the code under test, or adjust with( )
+and times( ). Expected arguments: ACTION = 'CANCELLED', ORDER_ID = '0000004711'. Closest actual
+call: ACTION = 'CANCELED', ORDER_ID = '0000004711'. Differs in: ACTION.
+```
+
+## Mock
+
+A strict double for scenarios where any unplanned call is a bug. Every expected
+call is declared with `expect_call( )` before the act step; a call that was not
+declared fails the test at once, and `verify( )` reports declared calls that did
+not happen as often as declared. Without `times( )` an expectation expects
+exactly one call, and it can answer like a stub rule.
+
+| Interface | Purpose |
+|---|---|
+| `ZIF_ATK_MOCK` | `instance( )`, `expect_call( )`, `verify( )` |
+| `ZIF_ATK_CALL_EXPECTATION` | Fluent: `with( )`, `times( )`, `returns( )`, `sets( )`, `raises( )` |
+
+```abap
+DATA(audit_log) = zcl_atk=>mock( 'ZIF_AUDIT_LOG' ).
+audit_log->expect_call( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` ).
+
+cut->cancel( '4711' ).
+
+audit_log->verify( ).
+```
+
+## Error messages
+
+Every mistake in a test surfaces through `ZCX_ATK`, whose text says what went
+wrong, how to fix it and, where it helps, the arguments involved. Close
+misspellings of method and parameter names get a suggestion. The texts live in
+message class `ZATK`; exceptions of the test double framework never reach the
+test untranslated. Failures during the act step are recorded without stopping
+the code under test, so a `CATCH cx_root` in the code under test cannot hide
+them.
+
+```text
+ZCL_ORDER_SERVICE is a final class, so no double can extend it. Extract an interface from
+ZCL_ORDER_SERVICE and let the code depend on it.
+```
+
+# Before and After
+
+Package `ZATK_DEMO` holds a small order service, `ZCL_ATK_DEMO_ORDER_SERVICE`:
+it reads an order from a repository and, when it cancels an open order, writes
+the cancellation to an audit log. Both collaborators are injected through the
+constructor. Its test include tests the same scenarios twice, in
+`ltc_with_raw_atdf` with the classic ABAP Test Double Framework and in
+`ltc_with_atk` with the library; the examples below are taken from there.
+
+```abap
+" Before
 repository = CAST zif_atk_demo_order_repo( cl_abap_testdouble=>create( 'ZIF_ATK_DEMO_ORDER_REPO' ) ).
 audit_log  = CAST zif_atk_demo_audit_log( cl_abap_testdouble=>create( 'ZIF_ATK_DEMO_AUDIT_LOG' ) ).
 cut = NEW zcl_atk_demo_order_service( repository = repository
                                       audit_log  = audit_log ).
+```
 
-" ABAP Test Kit: the kind of double says what it is for
-repository = zcl_atk=>stub( 'ZIF_ATK_DEMO_ORDER_REPO' ).   " answers questions
-audit_log  = zcl_atk=>spy( 'ZIF_ATK_DEMO_AUDIT_LOG' ).     " remembers what it was told
+```abap
+" After
+repository = zcl_atk=>stub( 'ZIF_ATK_DEMO_ORDER_REPO' ).
+audit_log  = zcl_atk=>spy( 'ZIF_ATK_DEMO_AUDIT_LOG' ).
 cut = NEW zcl_atk_demo_order_service( repository = CAST #( repository->instance( ) )
                                       audit_log  = CAST #( audit_log->instance( ) ) ).
 ```
 
-### 1. Return a value for a specific argument
+## Return a value for a specific argument
 
 ```abap
 " Before
@@ -102,10 +254,10 @@ DATA(is_cancelled) = cut->is_cancelled( '4711' ).
 cl_abap_unit_assert=>assert_true( act = is_cancelled msg = `A cancelled order must be reported as cancelled` ).
 ```
 
-**What you gain:** one sentence instead of a configuration plus a call that is not really a
-call. The argument the answer depends on is named, so the test says *why* this order comes back.
+The configuration is one statement, and the second line of the classic version -
+a call that only records its arguments - is gone.
 
-### 2. Raise an exception
+## Raise an exception
 
 ```abap
 " Before
@@ -118,12 +270,11 @@ repository->get_order( '4711' ).
 repository->when( 'GET_ORDER' )->raises( NEW zcx_atk_demo_not_found( ) ).
 ```
 
-**What you gain:** the recording call `repository->get_order( '4711' )` declares
-`RAISING zcx_atk_demo_not_found`, so the classic version forces a `RAISING` clause on a test
-method for a line that never raises. ATK also checks that `GET_ORDER` really declares the
-exception - a double that raises something the method cannot raise is rejected with a message.
+The recording call of the classic version declares `RAISING zcx_atk_demo_not_found`,
+so the test method needs a `RAISING` clause for a line that never raises. The
+library also checks that `GET_ORDER` declares the exception.
 
-### 3. Check that a method was called once, with the right arguments
+## Check that a method was called once, with the right arguments
 
 ```abap
 " Before
@@ -150,17 +301,11 @@ audit_log->was_called( 'WRITE'
   )->times( 1 ).
 ```
 
-**What you gain:** five statements become two. The test reads in the order you think about it -
-arrange, act, assert - instead of declaring the expectation before anything has happened. And
-when the check fails, you see why:
+Five statements become two, and the check is written after the act step
+instead of before it. When it fails, the message shows the closest actual call
+(see [Spy](#spy)).
 
-```text
-WRITE: expected 1 matching call(s), but found 0. Check the code under test, or adjust with( )
-and times( ). Expected arguments: ACTION = 'CANCELLED', ORDER_ID = '0000004711'. Closest actual
-call: ACTION = 'CANCELED', ORDER_ID = '0000004711'. Differs in: ACTION.
-```
-
-### 4. Check that a method was not called
+## Check that a method was not called
 
 ```abap
 " Before
@@ -184,17 +329,17 @@ cut->cancel( '4711' ).
 audit_log->was_not_called( 'WRITE' ).
 ```
 
-**What you gain:** no dummy arguments for a call that must *not* happen, no
-`ignore_all_parameters( )`, no `verify_expectations( )`. The last line says exactly what the
-test checks.
+No placeholder arguments for a call that must not happen, and no
+`ignore_all_parameters( )` or `verify_expectations( )`.
 
-### 5. Every call declared up front (strict mock)
+## Every call declared up front
 
-Sometimes any unplanned call is a bug. A mock fails the test at the moment an undeclared call
-happens, and `verify( )` reports declared calls that never came:
+The classic framework has no strict mode: a call without a matching
+configuration returns initial values. With the library, a mock fails the test
+at the undeclared call:
 
 ```abap
-" After (ABAP Test Kit only - ATDF has no strict mode: undeclared calls return initial values)
+" After
 DATA(strict_log) = zcl_atk=>mock( 'ZIF_ATK_DEMO_AUDIT_LOG' ).
 strict_log->expect_call( 'WRITE' )->with( parameter = 'ACTION' value = zif_atk_demo_audit_log=>action-cancelled ).
 
@@ -203,276 +348,67 @@ service->cancel( '4711' ).
 strict_log->verify( ).
 ```
 
-### 6. When the test itself is wrong
+## A call with arguments no rule matches
 
-The most expensive test bugs are silent. Say the configuration is for order `4711`, but the
-code under test asks for `0815`:
-
-- **Before:** ATDF finds no matching configuration and returns an initial order. The code under
-  test carries on with it, and the test fails somewhere later - or worse, passes.
-- **After:** a stub that has rules for `GET_ORDER` fails the test at the call:
+The configuration is for order `4711`, but the code under test asks for `0815`.
+The classic framework finds no matching configuration and returns an initial
+order, and the test fails later, if at all. A stub with rules for `GET_ORDER`
+fails the test at the call:
 
 ```text
 GET_ORDER was called with arguments that match none of its rules. Add a rule for these
 arguments, or check the code under test. Actual arguments: ORDER_ID = '0000000815'.
 ```
 
-The same care applies to the test's own values. `with( parameter = 'ORDER_ID' value = '47A1' )`
-is rejected instead of silently turning into `0000000471`, text that is too long for the
-parameter is rejected instead of cut, and `'12.345'` for an amount with two decimals is rejected
-instead of rounded.
+## Summary
 
-## Questions experienced developers ask
+In the four scenarios that exist in both test classes, the doubles need 6
+statements instead of 14, and none of them is a call that only records
+arguments. One difference to keep in mind: method and parameter names are
+strings. The classic framework catches a misspelled name at activation, the
+library the first time the test runs, with a suggestion for the closest name.
 
-**Is it type-safe?** Not in the compiler's sense. Method and parameter names are strings, so
-ATDF catches a misspelling at activation and ATK catches it the first time the test runs - with
-a suggestion for the closest name, and before the code under test runs. Rename refactoring in
-ADT does not update the strings either. In exchange, the test contains no call that only
-pretends to be one. A static check for these strings is planned (Phase 3).
+# Design Goals-Features
 
-**Does it replace ATDF?** No. ATDF still creates the doubles and intercepts the calls; ATK adds
-rules, a call journal and messages on top. You can mix both in one test class.
+* ABAP Cloud / Clean Core compatibility — passes the ATC variant `ABAP_CLOUD_DEVELOPMENT_DEFAULT`
+* Released APIs only (release contract C1), no dependencies besides SAP's own classes
+* Built on `CL_ABAP_TESTDOUBLE` — no own mocking engine; both can be used in the same test class
+* Tests in arrange-act-assert order: spies are checked after the act step
+* Messages that say what went wrong and how to fix it; framework exceptions never reach the test untranslated
+* Method names, parameter names and values checked against the doubled type with RTTI
+* Small public surface: one facade class, fluent interfaces and one exception class; everything else is local to `ZCL_ATK`
+* Test code only — `ZCL_ATK` is `FOR TESTING`, so production code cannot depend on it
+* Clean Code following the [Clean ABAP Style Guides](https://github.com/SAP/styleguides/blob/main/clean-abap/CleanABAP.md)
+* Modern ABAP syntax (7.58 / 9.14) — expressions, inline declarations, string templates
+* Unit tested with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, checked with abaplint on every push
+* Documented with ABAP Doc on every public declaration
 
-**Why not write test doubles by hand?** For an interface with one method and one scenario, a
-local class is fine. It grows with every method (or needs `PARTIALLY IMPLEMENTED`) and with
-every scenario (fields, flags, counters), and each hand-written double is code that needs its
-own review. With ATK the double is one line and the scenario is one sentence.
+# To-Do
 
-**Can it leak into production code?** No. `ZCL_ATK` is a test class (`FOR TESTING`), so only
-test code can use it.
+Work planned for the next releases, in the order it will be built. What is
+already on `main` but not yet released is listed under **Unreleased** in
+[CHANGELOG.md](CHANGELOG.md).
 
-**What does it need?** ABAP for Cloud Development on SAP BTP ABAP Environment, S/4HANA Cloud
-Public Edition, or S/4HANA 2023 and later. Only released SAP APIs, no other dependencies.
+## Next phases
 
-**What does the injection cost?** One `CAST #( double->instance( ) )` per collaborator, because
-one double object serves all four kinds (dummy, stub, spy, mock).
+1. **Assertions** — `zcl_atk=>expect( actual )->to_equal( expected )` on top of
+   `CL_ABAP_UNIT_ASSERT`, with matchers for tables, structures and exceptions,
+   and failure messages that always show the expected and the actual value
+2. **Testability analyzer** — an ATC check or abaplint rules that explain why a
+   class is hard to test (`SELECT` in a method, `NEW` of dependencies, static
+   calls, function modules) and how to fix each finding; it will also check the
+   method and parameter names in tests that use the library
+3. **Koans** — red-to-green exercises built on the test doubles and the
+   assertions
 
-## Install
+## Improvements to the test doubles
 
-1. In ADT, create the package **`ZATK`** with ABAP language version *ABAP for Cloud
-   Development*. On a BTP or S/4HANA Cloud system any package of your cloud software component
-   works.
-2. Link this repository to `ZATK` with abapGit (the ADT *abapGit Repositories* view, or the
-   abapGit report on an on-premise system) and pull. abapGit creates the sub-packages:
-
-   | Package | Content | Needed in production code? |
-   |---|---|---|
-   | `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK`, message class `ZATK` | No - `ZCL_ATK` is `FOR TESTING` |
-   | `ZATK_TEST` | Fixtures for ATK's own tests | No |
-   | `ZATK_DEMO` | The before/after demo | No |
-
-3. Activate everything (Ctrl+Shift+F3).
-4. Run the unit tests of package `ZATK` (right-click, *Run As → ABAP Unit Test*). All tests
-   should be green.
-
-## First run on A4H
-
-ATK relies on a few ATDF behaviors that are not documented. The library's own tests check each
-of them. If a test fails on your system, this is where to look:
-
-| Symptom | Behavior it checks | Where to adapt |
-|---|---|---|
-| Syntax error or warning about test classes in `zcl_atk.clas.locals_imp.abap` | `lth_atdf_gateway` and `lth_double_factory` use `CL_ABAP_TESTDOUBLE`, so they are `FOR TESTING`, but they live in the local implementation include because `ZCL_ATK` needs them | A warning can be ignored. On an error, remove `FOR TESTING` from both classes - the global test class may already make its whole class pool test code |
-| `when_returns_double_then_same` fails, or `?=` is rejected at activation | A value of static type `REF TO object` (what `instance( )` returns) can be down-cast into a generically typed target | `lcl_doubled_method=>copies_losslessly` |
-| `when_called_thrice_answers` fails | One catch-all configuration with `times( )` answers every call | `lth_atdf_gateway=>route_method` |
-| Every stub returns initial values, or `internal_error` is reported | The method name ATDF passes to the answer, with or without interface prefix | `lcl_doubled_type=>method_called_by_atdf` |
-| `given_generic_table_then_works` or `given_generic_input_then_works` fails | The recording call can fill generically typed parameters | `lcl_doubled_method=>concrete_type_for` |
-| `when_raises_then_caller_gets` fails | `IF_ABAP_TESTDOUBLE_RESULT->raise_exception( )` records the exception and ATDF raises it after the answer | `lcl_call_rule=>answer` |
-| A failure during the act step does not show up | `CL_ABAP_UNIT_ASSERT=>fail( quit = no )` inside the ATDF answer | `lcl_unit_failure_reporter` |
-| Objects were created as *Standard ABAP* | abapGit took the language version from its defaults | Change it in the object properties, or set it on the package before pulling |
-
-Please open an issue with the failing test and the message - that is exactly the feedback
-ATK needs at this stage.
-
-## Guide
-
-### Pick the right double
-
-| You need… | Use | The test fails when… |
-|---|---|---|
-| a collaborator that must be passed in, but is never used | `zcl_atk=>dummy( )` | it is called at all |
-| a collaborator that *answers* questions (a query) | `zcl_atk=>stub( )` | a method with rules is called with arguments no rule matches |
-| a collaborator that is *told* to do something (a command), checked afterwards | `zcl_atk=>spy( )` | like a stub, plus your `was_called( )` checks |
-| every call declared up front, nothing else allowed | `zcl_atk=>mock( )` | an undeclared call happens, or `verify( )` finds a declared call missing |
-
-Every double hands out the fake object with `instance( )`; cast it where you inject it.
-Doubles can be made of global interfaces and of global classes that are not final, not
-`CREATE PRIVATE`, and have no mandatory constructor parameters.
-
-### Stubs
-
-```abap
-DATA(repository) = zcl_atk=>stub( 'ZIF_ORDER_REPOSITORY' ).
-
-" answer one argument value
-repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '4711' )->returns( open_order ).
-
-" answer every other call
-repository->when( 'GET_ORDER' )->returns( unknown_order ).
-
-" fill EXPORTING or CHANGING parameters - you do not need to know which of the two
-repository->when( 'READ_TOTALS' )->sets( parameter = 'NET' value = 100 )->sets( parameter = 'TAX' value = 24 ).
-
-" raise an exception the method declares
-repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '0000' )->raises( NEW zcx_order_not_found( ) ).
-```
-
-- `with( )` names an IMPORTING or CHANGING parameter. Call it once per parameter.
-- `returns( )` sets the RETURNING value. `sets( )` sets EXPORTING or CHANGING parameters.
-  Both can be combined in one rule.
-- `raises( )` ends the rule. The method must declare the exception, unless it is a
-  `CX_NO_CHECK` exception.
-- A method without any rule returns initial values.
-
-### Spies
-
-```abap
-DATA(audit_log) = zcl_atk=>spy( 'ZIF_AUDIT_LOG' ).
-
-cut->cancel( '4711' ).
-
-audit_log->was_called( 'WRITE'
-  )->with( parameter = 'ORDER_ID' value = '4711'
-  )->with( parameter = 'ACTION' value = `CANCELLED`
-  )->times( 1 ).
-
-audit_log->was_not_called( 'DELETE' ).
-```
-
-`times( )` performs the check - a `was_called( )` without `times( )` checks nothing.
-`times( 0 )` and `was_not_called( )` both check that no matching call happened.
-
-### Mocks
-
-```abap
-DATA(audit_log) = zcl_atk=>mock( 'ZIF_AUDIT_LOG' ).
-audit_log->expect_call( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` ).
-
-cut->cancel( '4711' ).
-
-audit_log->verify( ).
-```
-
-An expectation without `times( )` expects exactly one call. It can answer like a stub rule:
-`expect_call( 'GET_ORDER' )->returns( open_order )`. If you are unsure whether you need a mock,
-use a spy.
-
-### Dummies
-
-```abap
-DATA(unused_log) = zcl_atk=>dummy( 'ZIF_AUDIT_LOG' ).
-cut = NEW zcl_order_service( repository = CAST #( repository->instance( ) )
-                             audit_log  = CAST #( unused_log->instance( ) ) ).
-```
-
-Any call of a dummy fails the test and names the method, so you know you need a stub instead.
-
-### How matching works
-
-- **Names** of methods and parameters are checked against the doubled type as soon as you
-  write them. Case does not matter. A close misspelling gets a suggestion.
-- **Values** are converted to the parameter's type, never with loss: `'4711'` becomes the
-  numeric text `0000004711`; `'47A1'`, text that is too long and decimals that would be rounded
-  are rejected.
-- **Parameters you do not name** match any value.
-- **Several rules match a call:** the rule with the most `with( )` conditions wins; on a tie,
-  the rule written last wins. So a general rule and specific exceptions can be written in any
-  order.
-- **Strict stubs:** once a method has rules, a call that matches none of them fails the test.
-  Methods without rules return initial values.
-- **Failures during the act step** are recorded without stopping the code under test, so a
-  `CATCH cx_root` in the code under test cannot hide them.
-
-### When something is wrong
-
-Every problem raises or reports `ZCX_ATK`. Its text has three parts - what went wrong, how to
-fix it, and details:
-
-```text
-ZCL_ORDER_SERVICE is a final class, so no double can extend it. Extract an interface from
-ZCL_ORDER_SERVICE and let the code depend on it.
-```
-
-The texts live in message class `ZATK` (001-025 what, 101-121 fix, 201-212 labels). ATDF's own
-exceptions never reach the test untranslated.
-
-## How it works inside
-
-1. `zcl_atk=>stub( )` describes the type with RTTI and rejects what ATDF cannot double, with a
-   reason.
-2. ATDF creates the double. For every method, ATK registers **one** catch-all configuration
-   (`ignore_all_parameters( )` and an answer object) with a dynamic recording call built from
-   RTTI. This is the only place where the configure-then-call two-step happens.
-3. `when( )`, `with( )` and the other configuration methods only write rules into memory,
-   checked with RTTI.
-4. At runtime, ATDF hands every call to ATK's answer, which records it and answers with the best
-   rule.
-5. `was_called( )` and `verify( )` read the recorded calls.
-
-All of it is in `zcl_atk.clas.locals_imp.abap` as local classes, so the public surface is only
-`ZCL_ATK`, the `ZIF_ATK_*` interfaces and `ZCX_ATK`.
-
-## Limitations
-
-- Values are compared with `=`. Matchers such as "any text containing X" are planned for
-  Phase 2.
-- Events of doubled types are not supported yet.
-- Methods with generically typed mandatory parameters of kind `SORTED TABLE` or `HASHED TABLE`
-  cannot be doubled yet (`INDEX TABLE`, `STANDARD TABLE`, `ANY` and the other generic types
-  work).
-- Static, final and private methods cannot be doubled - an ATDF restriction.
-- One answer per rule. Different answers for consecutive calls are an open design question.
-- An optional IMPORTING parameter that the caller leaves out is recorded as initial, not with
-  its `DEFAULT` value (RTTI does not expose default values).
-- Values shown inside the first sentence of a message are cut at 50 characters (T100
-  placeholders); longer texts go to the details part of the message.
-
-## Objects
-
-| Object | Purpose |
-|---|---|
-| `ZCL_ATK` | Entry point: `dummy( )`, `stub( )`, `spy( )`, `mock( )` |
-| `ZIF_ATK_DOUBLE` | `instance( )` - what every double offers |
-| `ZIF_ATK_DUMMY`, `ZIF_ATK_STUB`, `ZIF_ATK_SPY`, `ZIF_ATK_MOCK` | One interface per kind of double; the type shows what is allowed |
-| `ZIF_ATK_CALL_RULE` | `with( )`, `returns( )`, `sets( )`, `raises( )` of a stub or spy |
-| `ZIF_ATK_CALL_EXPECTATION` | The same plus `times( )`, for mocks |
-| `ZIF_ATK_CALL_VERIFICATION` | `with( )`, `times( )` of a spy check |
-| `ZCX_ATK` | The only exception; `problem` tells which one |
-| `ZATK` | Message class |
-
-## Development
-
-Static checks run with [abaplint](https://abaplint.org) in ABAP Cloud mode on every push
-(`.github/workflows/abaplint.yml`). To run them locally:
-
-```sh
-npx @abaplint/cli@latest abaplint.json
-```
-
-`abaplint-stubs/` holds minimal definitions of the ATDF and ABAP Unit objects so that abaplint
-can type-check calls to them; abapGit ignores the folder. The configuration follows the
-[Clean ABAP](https://github.com/SAP/styleguides/blob/main/clean-abap/CleanABAP.md) style guide,
-so the rules that enforce Hungarian prefixes are switched off, and so are:
-
-| Rule | Why it is off |
-|---|---|
-| `no_aliases` | The interfaces alias `instance( )` and `when( )` so tests read `stub->when( )` |
-| `no_dynamic_stuff` | Dynamic calls and RTTI are how ATK works |
-| `easy_to_find_messages` | Message numbers are chosen through the constants of `ZCX_ATK` |
-| `no_inline_in_optional_branches` | It also flags `LOOP AT … INTO DATA( )` and `CATCH … INTO DATA( )` |
-| `definitions_top` | Clean ABAP prefers inline declarations |
-| `line_break_multiple_parameters` (tests only) | `with( parameter = … value = … )` reads best on one line |
-| `local_testclass_consistency` (`zcl_atk` local types only) | The ATDF gateway must be `FOR TESTING` and visible to `ZCL_ATK` |
-
-## Roadmap
-
-- **Phase 1** - test doubles (this release).
-- **Phase 2** - fluent assertions: `zcl_atk=>expect( actual )->to_equal( expected )` with the
-  same message style, and matchers for `with( )`.
-- **Phase 3** - a testability analyzer that explains why a class is hard to test and how to fix
-  it, including a check for misspelled names in ATK tests.
-- **Phase 4** - koans: red-to-green exercises built on Phases 1 and 2.
-
-## License
-
-[MIT](LICENSE)
+- **Consecutive answers** — a different answer for the first, second and
+  following calls of a method
+- **Matchers for `with( )`** — conditions such as "any text containing" instead
+  of equality
+- **Events** — raise the events of a doubled type
+- **Generic sorted and hashed tables** — mandatory parameters typed
+  `SORTED TABLE` or `HASHED TABLE`
+- **Default values** — an optional parameter the caller leaves out is recorded
+  with its `DEFAULT` value instead of initial
