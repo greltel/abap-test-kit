@@ -1,0 +1,4 @@
+CLASS cx_atd_exception_core DEFINITION PUBLIC INHERITING FROM cx_static_check CREATE PUBLIC.
+ENDCLASS.
+CLASS cx_atd_exception_core IMPLEMENTATION.
+ENDCLASS.
