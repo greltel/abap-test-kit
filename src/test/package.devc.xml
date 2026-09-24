@@ -4,6 +4,7 @@
   <asx:values>
    <DEVC>
     <CTEXT>ABAP Test Kit: fixtures for its own tests</CTEXT>
+    <PACKKIND>5</PACKKIND>
    </DEVC>
   </asx:values>
  </asx:abap>
