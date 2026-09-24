@@ -15,6 +15,7 @@
     <item>/abaplint.json</item>
     <item>/azure-pipelines.yml</item>
    </IGNORE>
+   <ABAP_LANGUAGE_VERSION>cloudDevelopment</ABAP_LANGUAGE_VERSION>
   </DATA>
  </asx:values>
 </asx:abap>
