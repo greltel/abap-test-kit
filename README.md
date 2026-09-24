@@ -42,16 +42,19 @@ The library is written against the **ABAP for Cloud Development** language versi
 # Installation
 
 Install via [abapGit](https://abapgit.org) into a package flagged as
-**ABAP Cloud** in the customer namespace, e.g. `ZATK`. abapGit creates two
-sub-packages next to the library:
+**ABAP Cloud** in the customer namespace, e.g. `ZATK`. The repository is set to
+the ABAP language version *ABAP for Cloud Development*, so abapGit only imports
+it into packages with that language version. Create the package and its two
+sub-packages in ADT before the pull:
 
-| Package | Content |
-|---|---|
-| `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
-| `ZATK_TEST` | Fixtures for the unit tests of the library |
-| `ZATK_DEMO` | A small order service, tested once with the classic framework and once with the library |
+| Package | Super package | Content |
+|---|---|---|
+| `ZATK` | - | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
+| `ZATK_TEST` | `ZATK` | Fixtures for the unit tests of the library |
+| `ZATK_DEMO` | `ZATK` | A small order service, tested once with the classic framework and once with the library |
 
-After the pull, run the unit tests of the package; all of them should pass.
+Then link `https://github.com/greltel/abap-test-kit.git` to `ZATK`, pull, and
+run the unit tests of `ZATK` and its sub-packages; all of them should pass.
 `ZCL_ATK` is a test class (`FOR TESTING`), so only test code can use it.
 
 # Versioning

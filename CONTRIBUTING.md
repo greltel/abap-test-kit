@@ -40,8 +40,11 @@ folders.
 
 # Development setup
 
-1. Create package `ZATK` with ABAP language version *ABAP for Cloud
+1. Create packages `ZATK`, `ZATK_TEST` and `ZATK_DEMO` (the last two with
+   super package `ZATK`) with ABAP language version *ABAP for Cloud
    Development*. The ABAP Cloud Developer Trial works fine for development.
+   `.abapgit.xml` sets the repository to `cloudDevelopment`, so abapGit
+   refuses packages and objects with another language version.
 2. Link a fork of the repository to `ZATK` with abapGit and pull.
 3. Activate everything and run the unit tests of `ZATK` and its sub-packages.
 4. Change the objects in ADT, then stage and commit them with abapGit. Files
@@ -170,7 +173,7 @@ on a system, this is where to look:
 | `given_generic_table_then_works` or `given_generic_input_then_works` fails | The recording call can fill generically typed parameters | `lcl_doubled_method=>concrete_type_for` |
 | `when_raises_then_caller_gets` fails | `IF_ABAP_TESTDOUBLE_RESULT->raise_exception( )` records the exception and the framework raises it after the answer | `lcl_call_rule=>answer` |
 | A failure during the act step does not show up | `CL_ABAP_UNIT_ASSERT=>fail( quit = no )` inside the answer object | `lcl_unit_failure_reporter` |
-| Objects were created as *Standard ABAP* | abapGit took the language version from its defaults | Change it in the object properties, or set it on the package before pulling |
+| abapGit: *ABAP Language Version of linked package is not compatible with repository settings*, or an object *has ABAP language version … but repository is set to …* | The packages were created with *Standard ABAP*, for example by abapGit itself | Set *ABAP for Cloud Development* on `ZATK`, `ZATK_TEST` and `ZATK_DEMO` in ADT and pull again |
 
 # Releasing
 
