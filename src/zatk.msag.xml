@@ -1,0 +1,362 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZATK</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>ABAP Test Kit</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Type &amp;1 does not exist or is not active.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>&amp;1 is not an interface or a class.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>&amp;1 is a final class, so no double can extend it.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>&amp;1 is CREATE PRIVATE, so no double can extend it.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>The constructor of &amp;1 has the mandatory parameter &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>&amp;1 has no instance method &amp;2 that a double can take over.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Method &amp;1 has no parameter &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>&amp;2 is an &amp;3 parameter of &amp;1, not an input.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>&amp;2 is an &amp;3 parameter of &amp;1, not an output.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>Method &amp;1 has no RETURNING parameter.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>Value &amp;1 does not fit parameter &amp;2 of type &amp;3.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>&amp;1 does not declare &amp;2 in its RAISING clause.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>This rule for &amp;1 already has an answer.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>014</MSGNR>
+     <TEXT>Parameter &amp;2 of &amp;1 already has a value in this rule or check.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>times( ) of a mock needs 1 or more, but got &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>016</MSGNR>
+     <TEXT>times( ) of a spy needs 0 or more, but got &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>017</MSGNR>
+     <TEXT>raises( ) for &amp;1 got no exception object.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>018</MSGNR>
+     <TEXT>ATDF could not create a double of &amp;1.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>019</MSGNR>
+     <TEXT>ATDF could not take over method &amp;1.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>020</MSGNR>
+     <TEXT>Dummy &amp;1 was called: &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>021</MSGNR>
+     <TEXT>&amp;1 was called with arguments that match none of its rules.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>022</MSGNR>
+     <TEXT>Unexpected call of &amp;1 on a mock.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>023</MSGNR>
+     <TEXT>&amp;1: expected &amp;2 matching call(s), but found &amp;3.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>024</MSGNR>
+     <TEXT>&amp;1 must not be called, but was called &amp;2 time(s).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>025</MSGNR>
+     <TEXT>ATK could not handle a call of &amp;1.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>101</MSGNR>
+     <TEXT>Doubles need a global interface or a non-final global class.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>102</MSGNR>
+     <TEXT>Extract an interface from &amp;1 and let the code depend on it.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>103</MSGNR>
+     <TEXT>Did you mean &amp;3?</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>104</MSGNR>
+     <TEXT>Pick one of the names listed below.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>105</MSGNR>
+     <TEXT>with( ) is for IMPORTING and CHANGING; outputs go to sets( ).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>106</MSGNR>
+     <TEXT>sets( ) is for EXPORTING and CHANGING; inputs go to with( ).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>107</MSGNR>
+     <TEXT>Use sets( ) for its EXPORTING or CHANGING parameters.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>108</MSGNR>
+     <TEXT>Pass a value of type &amp;3, for example a typed variable.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>109</MSGNR>
+     <TEXT>Raise an exception the method declares, or a CX_NO_CHECK one.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>110</MSGNR>
+     <TEXT>A rule answers with returns( ) and sets( ), or with raises( ).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>111</MSGNR>
+     <TEXT>Give each parameter one value; add another rule for other values.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>112</MSGNR>
+     <TEXT>To check that &amp;1 is never called, use a spy and was_not_called( ).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>113</MSGNR>
+     <TEXT>Pass how many matching calls you expect.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>114</MSGNR>
+     <TEXT>Pass an exception object, for example NEW zcx_not_found( ).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>115</MSGNR>
+     <TEXT>Check that &amp;1 is active, not FOR TESTING and usable in your package.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>116</MSGNR>
+     <TEXT>This is probably an ATK limitation - please open an issue.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>117</MSGNR>
+     <TEXT>Use zcl_atk=&gt;stub( ) if the code under test needs this collaborator.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>118</MSGNR>
+     <TEXT>Add a rule for these arguments, or check the code under test.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>119</MSGNR>
+     <TEXT>Declare it with expect_call( ), or use a spy if extra calls are fine.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>120</MSGNR>
+     <TEXT>Check the code under test, or adjust with( ) and times( ).</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>121</MSGNR>
+     <TEXT>Check the code under test, or use a stub if the call is fine.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>201</MSGNR>
+     <TEXT>Expected arguments:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>202</MSGNR>
+     <TEXT>Closest actual call:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>203</MSGNR>
+     <TEXT>Actual arguments:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>204</MSGNR>
+     <TEXT>Recorded calls:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>205</MSGNR>
+     <TEXT>No call was recorded.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>206</MSGNR>
+     <TEXT>any</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>207</MSGNR>
+     <TEXT>Differs in:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>208</MSGNR>
+     <TEXT>Available:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>209</MSGNR>
+     <TEXT>table with &amp;1 rows</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>210</MSGNR>
+     <TEXT>object of &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>211</MSGNR>
+     <TEXT>initial reference</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>212</MSGNR>
+     <TEXT>data reference</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>
