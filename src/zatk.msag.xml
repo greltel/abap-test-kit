@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
@@ -18,25 +18,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>002</MSGNR>
-     <TEXT>&amp;1 is not an interface or a class.</TEXT>
+     <TEXT>&amp;1 is not an interface.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>003</MSGNR>
-     <TEXT>&amp;1 is a final class, so no double can extend it.</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZATK</ARBGB>
-     <MSGNR>004</MSGNR>
-     <TEXT>&amp;1 is CREATE PRIVATE, so no double can extend it.</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZATK</ARBGB>
-     <MSGNR>005</MSGNR>
-     <TEXT>The constructor of &amp;1 has the mandatory parameter &amp;2.</TEXT>
+     <TEXT>&amp;1 is a class, and ATK doubles interfaces only.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -162,13 +150,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>101</MSGNR>
-     <TEXT>Doubles need a global interface or a non-final global class.</TEXT>
+     <TEXT>Doubles need a global interface.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>102</MSGNR>
-     <TEXT>Extract an interface from &amp;1 and let the code depend on it.</TEXT>
+     <TEXT>Extract an interface from &amp;1, or double it with CL_ABAP_TESTDOUBLE.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
