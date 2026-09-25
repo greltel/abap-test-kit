@@ -30,7 +30,7 @@ first.
 | Folder | Package | Content |
 |---|---|---|
 | `src/` | `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
-| `src/test/` | `ZATK_TEST` | Interfaces, classes and an exception used as doubled types by the unit tests of `ZCL_ATK` |
+| `src/test/` | `ZATK_TEST` | Interfaces and an exception used by the unit tests of `ZCL_ATK`, and a class they check is rejected |
 | `src/demo/` | `ZATK_DEMO` | The order service of the [Before and After](README.md#before-and-after) section, tested once with the classic framework and once with the library |
 | `abaplint-stubs/` | - | Minimal definitions of SAP objects for abaplint; abapGit ignores the folder |
 | `.github/workflows/` | - | The abaplint run on every push and pull request |
@@ -108,11 +108,10 @@ test needs a parameter shape that does not exist yet.
 
 | Test class | Covers |
 |---|---|
-| `ltc_doubled_type` | Which types can be doubled, and the messages for the ones that cannot |
+| `ltc_doubled_type` | Only interfaces can be doubled; the messages for classes, data types and unknown types |
 | `ltc_value_conversion` | Conversion of rule values to the parameter types, without loss |
 | `ltc_stub` | Rules, matching order, strict stubs |
 | `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic and reference parameters |
-| `ltc_class_double` | Doubles of global classes |
 | `ltc_spy` | `was_called( )`, `was_not_called( )` and their messages |
 | `ltc_mock` | `expect_call( )`, `verify( )` and undeclared calls |
 | `ltc_dummy` | Calls of a dummy |
@@ -129,8 +128,10 @@ must pass, and the README examples are copied from them.
 
 # How it works inside
 
-1. `zcl_atk=>stub( )` describes the type with RTTI and rejects what the test
-   double framework cannot double, with a reason.
+1. `zcl_atk=>stub( )` describes the type with RTTI and rejects everything that
+   is not a global interface, with a reason. Classes are rejected because ABAP
+   Cloud code cannot call the methods of the class the test double framework
+   generates for a class double by name (step 2).
 2. `CL_ABAP_TESTDOUBLE` creates the double. For every method the library
    registers **one** catch-all configuration (`ignore_all_parameters( )`,
    `times( )` and an answer object), followed by a dynamic recording call built
@@ -144,8 +145,9 @@ must pass, and the README examples are copied from them.
 
 | Local class | Role |
 |---|---|
-| `lcl_doubled_type` | RTTI description of the doubled type and its methods that can be configured |
-| `lcl_doubled_method` | Parameters of one method; converts values and builds the recording call |
+| `lcl_doubled_type` | RTTI description of the doubled interface and its methods that can be configured |
+| `lcl_doubled_method` | Parameters of one method; checks values against them and builds the recording call |
+| `lcl_value_conversion` | Copies a value into another type only when nothing is lost; values of different types are never compared directly, because ABAP cannot catch a conversion error inside a comparison |
 | `lcl_arguments` | Parameter names and values of a rule, a check or a recorded call, and the comparison between them |
 | `lcl_call_rule` | One rule or expectation: conditions and answer |
 | `lcl_rulebook` | The rules of one double; picks the best rule for a call |
@@ -167,7 +169,8 @@ on a system, this is where to look:
 | Symptom | Behavior it checks | Where to adapt |
 |---|---|---|
 | Syntax error or warning about test classes in `zcl_atk.clas.locals_imp.abap` | `lth_atdf_gateway` and `lth_double_factory` use `CL_ABAP_TESTDOUBLE`, so they are `FOR TESTING`, but they live in the local implementation include because `ZCL_ATK` needs them | A warning can be ignored. On an error, remove `FOR TESTING` from both classes - the global test class may already make its whole class pool test code |
-| `when_returns_double_then_same` fails, or `?=` is rejected at activation | A value of static type `REF TO object` (what `instance( )` returns) can be down-cast into a generically typed target | `lcl_doubled_method=>copies_losslessly` |
+| `when_returns_double_then_same` fails, or `?=` is rejected at activation | A value of static type `REF TO object` (what `instance( )` returns) can be down-cast into a generically typed target | `lcl_value_conversion=>copies_losslessly` |
+| Runtime error `CONVT_NO_NUMBER` in `ZCL_ATK` | A text that is not a number was compared with a number; ABAP cannot catch that inside a comparison | Every comparison of values of different types must go through `lcl_value_conversion=>copies_losslessly` |
 | `when_called_thrice_answers` fails | One catch-all configuration with `times( )` answers every call | `lth_atdf_gateway=>route_method` |
 | Every stub returns initial values, or `internal_error` is reported | The method name the framework passes to the answer, with or without interface prefix | `lcl_doubled_type=>method_called_by_atdf` |
 | `given_generic_table_then_works` or `given_generic_input_then_works` fails | The recording call can fill generically typed parameters | `lcl_doubled_method=>concrete_type_for` |
