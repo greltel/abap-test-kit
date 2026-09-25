@@ -106,6 +106,45 @@ CLASS lcl_name_hint DEFINITION FINAL CREATE PRIVATE.
 ENDCLASS.
 
 
+"! Copies a value into a data object of another type, but only when nothing is lost on the way.
+CLASS lcl_value_conversion DEFINITION FINAL CREATE PRIVATE.
+  PUBLIC SECTION.
+    "! Copies the source into the target and tells whether the target now holds exactly the
+    "! source value. Conversion errors are handled here, never in a comparison, because ABAP
+    "! cannot catch a conversion error that happens inside a comparison.
+    CLASS-METHODS copies_losslessly
+      IMPORTING source        TYPE any
+                target        TYPE REF TO data
+      RETURNING VALUE(result) TYPE abap_bool.
+
+  PRIVATE SECTION.
+    CLASS-METHODS fits_structurally
+      IMPORTING source        TYPE any
+                target_type   TYPE REF TO cl_abap_datadescr
+      RETURNING VALUE(result) TYPE abap_bool.
+
+    CLASS-METHODS has_same_line_type
+      IMPORTING source_type   TYPE REF TO cl_abap_typedescr
+                target_type   TYPE REF TO cl_abap_datadescr
+      RETURNING VALUE(result) TYPE abap_bool.
+
+    CLASS-METHODS is_same_value
+      IMPORTING source        TYPE any
+                target        TYPE any
+      RETURNING VALUE(result) TYPE abap_bool
+      RAISING   cx_sy_conversion_error.
+
+    "! Numbers and numeric text (type N): compared with text, ABAP converts the text to a number.
+    CLASS-METHODS is_numeric
+      IMPORTING type_kind     TYPE abap_typekind
+      RETURNING VALUE(result) TYPE abap_bool.
+
+    CLASS-METHODS is_text
+      IMPORTING type_kind     TYPE abap_typekind
+      RETURNING VALUE(result) TYPE abap_bool.
+ENDCLASS.
+
+
 "! Named values of method parameters: the arguments of a recorded call, or the conditions of a
 "! rule or check. As conditions they are met when every named value equals the actual one.
 CLASS lcl_arguments DEFINITION FINAL.
@@ -152,11 +191,6 @@ CLASS lcl_arguments DEFINITION FINAL.
     METHODS is_met_by
       IMPORTING expected      TYPE ty_argument
                 actual        TYPE REF TO lcl_arguments
-      RETURNING VALUE(result) TYPE abap_bool.
-
-    CLASS-METHODS are_comparable
-      IMPORTING expected      TYPE any
-                actual        TYPE any
       RETURNING VALUE(result) TYPE abap_bool.
 
     CLASS-METHODS describe_argument
@@ -281,35 +315,6 @@ CLASS lcl_doubled_method DEFINITION FINAL.
                 template      TYPE any
       RETURNING VALUE(result) TYPE REF TO data.
 
-    CLASS-METHODS copies_losslessly
-      IMPORTING source        TYPE any
-                target        TYPE REF TO data
-      RETURNING VALUE(result) TYPE abap_bool.
-
-    CLASS-METHODS fits_structurally
-      IMPORTING source        TYPE any
-                target_type   TYPE REF TO cl_abap_datadescr
-      RETURNING VALUE(result) TYPE abap_bool.
-
-    CLASS-METHODS has_same_line_type
-      IMPORTING source_type   TYPE REF TO cl_abap_typedescr
-                target_type   TYPE REF TO cl_abap_datadescr
-      RETURNING VALUE(result) TYPE abap_bool.
-
-    CLASS-METHODS is_same_value
-      IMPORTING source        TYPE any
-                target        TYPE any
-      RETURNING VALUE(result) TYPE abap_bool
-      RAISING   cx_sy_conversion_error.
-
-    CLASS-METHODS is_numeric
-      IMPORTING type_kind     TYPE abap_typekind
-      RETURNING VALUE(result) TYPE abap_bool.
-
-    CLASS-METHODS is_text
-      IMPORTING type_kind     TYPE abap_typekind
-      RETURNING VALUE(result) TYPE abap_bool.
-
     CLASS-METHODS placeholder_for
       IMPORTING data_type     TYPE REF TO cl_abap_datadescr
       RETURNING VALUE(result) TYPE REF TO data.
@@ -337,12 +342,12 @@ CLASS lcl_doubled_method DEFINITION FINAL.
 ENDCLASS.
 
 
-"! The interface or class being doubled, described with RTTI.
+"! The interface being doubled, described with RTTI.
 CLASS lcl_doubled_type DEFINITION FINAL CREATE PRIVATE.
   PUBLIC SECTION.
     TYPES ty_methods TYPE STANDARD TABLE OF REF TO lcl_doubled_method WITH EMPTY KEY.
 
-    "! Describes a global interface or a class that ATDF can extend.
+    "! Describes a global interface; anything else is rejected with the reason.
     CLASS-METHODS describe
       IMPORTING type_name     TYPE csequence
       RETURNING VALUE(result) TYPE REF TO lcl_doubled_type.
@@ -376,15 +381,10 @@ CLASS lcl_doubled_type DEFINITION FINAL CREATE PRIVATE.
       END OF ty_catalog_entry.
     TYPES ty_catalog TYPE SORTED TABLE OF ty_catalog_entry WITH UNIQUE KEY name.
 
-    CONSTANTS constructor_name TYPE abap_methname VALUE 'CONSTRUCTOR'.
     CONSTANTS component_separator TYPE string VALUE `~`.
 
     DATA doubled_type_name TYPE string.
-    DATA is_interface TYPE abap_bool.
     DATA catalog TYPE ty_catalog.
-
-    CLASS-METHODS check_extensible
-      IMPORTING class_type TYPE REF TO cl_abap_classdescr.
 
     METHODS add_methods_of
       IMPORTING owner  TYPE REF TO cl_abap_objectdescr
@@ -789,6 +789,96 @@ CLASS lcl_name_hint IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lcl_value_conversion IMPLEMENTATION.
+
+  METHOD copies_losslessly.
+    ASSIGN target->* TO FIELD-SYMBOL(<target>).
+    DATA(target_type) = CAST cl_abap_datadescr( cl_abap_typedescr=>describe_by_data( <target> ) ).
+    IF fits_structurally( source      = source
+                          target_type = target_type ) = abap_false.
+      RETURN.
+    ENDIF.
+    TRY.
+        IF target_type->kind = cl_abap_typedescr=>kind_ref.
+          " instance( ) of a double is typed REF TO object; only a down cast gives it the parameter type
+          <target> ?= source.
+        ELSE.
+          <target> = source.
+        ENDIF.
+        result = is_same_value( source = source
+                                target = <target> ).
+      CATCH cx_sy_conversion_error cx_sy_move_cast_error cx_sy_itab_error.
+        result = abap_false.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD fits_structurally.
+    DATA(source_type) = cl_abap_typedescr=>describe_by_data( source ).
+    CASE target_type->kind.
+      WHEN cl_abap_typedescr=>kind_elem.
+        result = xsdbool( source_type->kind = cl_abap_typedescr=>kind_elem ).
+      WHEN cl_abap_typedescr=>kind_ref.
+        result = xsdbool( source_type->kind = cl_abap_typedescr=>kind_ref ).
+      WHEN cl_abap_typedescr=>kind_table.
+        result = has_same_line_type( source_type = source_type
+                                     target_type = target_type ).
+      WHEN OTHERS.
+        result = target_type->applies_to_data( source ).
+    ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD has_same_line_type.
+    IF source_type->kind <> cl_abap_typedescr=>kind_table.
+      RETURN.
+    ENDIF.
+    DATA(source_line) = CAST cl_abap_tabledescr( source_type )->get_table_line_type( ).
+    DATA(target_line) = CAST cl_abap_tabledescr( target_type )->get_table_line_type( ).
+    result = xsdbool( source_line->absolute_name = target_line->absolute_name ).
+  ENDMETHOD.
+
+
+  METHOD is_same_value.
+    DATA exact TYPE decfloat34.
+
+    DATA(target_kind) = cl_abap_typedescr=>describe_by_data( target )->type_kind.
+    DATA(source_kind) = cl_abap_typedescr=>describe_by_data( source )->type_kind.
+    " a comparison cannot recover from text that is not a number, and rounds text to the
+    " decimals of the number; so the text side becomes an exact number by an assignment first
+    IF is_numeric( target_kind ) = abap_true AND is_text( source_kind ) = abap_true.
+      exact = source.
+      result = xsdbool( target = exact ).
+    ELSEIF is_text( target_kind ) = abap_true AND is_numeric( source_kind ) = abap_true.
+      exact = target.
+      result = xsdbool( exact = source ).
+    ELSE.
+      result = xsdbool( target = source ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD is_numeric.
+    result = xsdbool( type_kind = cl_abap_typedescr=>typekind_int
+                   OR type_kind = cl_abap_typedescr=>typekind_int1
+                   OR type_kind = cl_abap_typedescr=>typekind_int2
+                   OR type_kind = cl_abap_typedescr=>typekind_int8
+                   OR type_kind = cl_abap_typedescr=>typekind_num
+                   OR type_kind = cl_abap_typedescr=>typekind_packed
+                   OR type_kind = cl_abap_typedescr=>typekind_float
+                   OR type_kind = cl_abap_typedescr=>typekind_decfloat16
+                   OR type_kind = cl_abap_typedescr=>typekind_decfloat34 ).
+  ENDMETHOD.
+
+
+  METHOD is_text.
+    result = xsdbool( type_kind = cl_abap_typedescr=>typekind_char
+                   OR type_kind = cl_abap_typedescr=>typekind_string ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lcl_arguments IMPLEMENTATION.
 
   METHOD put.
@@ -833,36 +923,22 @@ CLASS lcl_arguments IMPLEMENTATION.
 
 
   METHOD is_met_by.
+    DATA converted TYPE REF TO data.
+
     DATA(actual_value) = actual->value_of( expected-name ).
     IF actual_value IS NOT BOUND.
       RETURN.
     ENDIF.
     ASSIGN expected-value->* TO FIELD-SYMBOL(<expected>).
     ASSIGN actual_value->* TO FIELD-SYMBOL(<actual>).
-    IF are_comparable( expected = <expected>
-                       actual   = <actual> ) = abap_false.
+    " a generic parameter can get a value of any type; compare only values of the same type
+    CREATE DATA converted LIKE <expected>.
+    IF lcl_value_conversion=>copies_losslessly( source = <actual>
+                                                target = converted ) = abap_false.
       RETURN.
     ENDIF.
-    TRY.
-        result = xsdbool( <actual> = <expected> ).
-      CATCH cx_sy_conversion_error.
-        " a generic parameter got a value that cannot be compared, for example text with a number
-        result = abap_false.
-    ENDTRY.
-  ENDMETHOD.
-
-
-  METHOD are_comparable.
-    DATA(expected_type) = CAST cl_abap_datadescr( cl_abap_typedescr=>describe_by_data( expected ) ).
-    DATA(actual_kind) = cl_abap_typedescr=>describe_by_data( actual )->kind.
-    IF expected_type->kind <> actual_kind.
-      RETURN.
-    ENDIF.
-    IF actual_kind = cl_abap_typedescr=>kind_elem OR actual_kind = cl_abap_typedescr=>kind_ref.
-      result = abap_true.
-    ELSE.
-      result = expected_type->applies_to_data( actual ).
-    ENDIF.
+    ASSIGN converted->* TO FIELD-SYMBOL(<converted>).
+    result = xsdbool( <converted> = <expected> ).
   ENDMETHOD.
 
 
@@ -1045,8 +1121,8 @@ CLASS lcl_doubled_method IMPLEMENTATION.
   METHOD to_value.
     result = new_value_for( parameter = parameter
                             template  = value ).
-    IF NOT copies_losslessly( source = value
-                              target = result ).
+    IF NOT lcl_value_conversion=>copies_losslessly( source = value
+                                                    target = result ).
       RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>value_does_not_fit
                                    context = VALUE #( value1 = lcl_value_formatter=>format( value )
                                                       value2 = parameter-name
@@ -1104,86 +1180,6 @@ CLASS lcl_doubled_method IMPLEMENTATION.
       ENDTRY.
     ENDIF.
     CREATE DATA result LIKE template.
-  ENDMETHOD.
-
-
-  METHOD copies_losslessly.
-    ASSIGN target->* TO FIELD-SYMBOL(<target>).
-    DATA(target_type) = CAST cl_abap_datadescr( cl_abap_typedescr=>describe_by_data( <target> ) ).
-    IF fits_structurally( source      = source
-                          target_type = target_type ) = abap_false.
-      RETURN.
-    ENDIF.
-    TRY.
-        IF target_type->kind = cl_abap_typedescr=>kind_ref.
-          " instance( ) of a double is typed REF TO object; only a down cast gives it the parameter type
-          <target> ?= source.
-        ELSE.
-          <target> = source.
-        ENDIF.
-        result = is_same_value( source = source
-                                target = <target> ).
-      CATCH cx_sy_conversion_error cx_sy_move_cast_error cx_sy_itab_error.
-        result = abap_false.
-    ENDTRY.
-  ENDMETHOD.
-
-
-  METHOD fits_structurally.
-    DATA(source_type) = cl_abap_typedescr=>describe_by_data( source ).
-    CASE target_type->kind.
-      WHEN cl_abap_typedescr=>kind_elem.
-        result = xsdbool( source_type->kind = cl_abap_typedescr=>kind_elem ).
-      WHEN cl_abap_typedescr=>kind_ref.
-        result = xsdbool( source_type->kind = cl_abap_typedescr=>kind_ref ).
-      WHEN cl_abap_typedescr=>kind_table.
-        result = has_same_line_type( source_type = source_type
-                                     target_type = target_type ).
-      WHEN OTHERS.
-        result = target_type->applies_to_data( source ).
-    ENDCASE.
-  ENDMETHOD.
-
-
-  METHOD has_same_line_type.
-    IF source_type->kind <> cl_abap_typedescr=>kind_table.
-      RETURN.
-    ENDIF.
-    DATA(source_line) = CAST cl_abap_tabledescr( source_type )->get_table_line_type( ).
-    DATA(target_line) = CAST cl_abap_tabledescr( target_type )->get_table_line_type( ).
-    result = xsdbool( source_line->absolute_name = target_line->absolute_name ).
-  ENDMETHOD.
-
-
-  METHOD is_same_value.
-    DATA exact TYPE decfloat34.
-
-    DATA(target_kind) = cl_abap_typedescr=>describe_by_data( target )->type_kind.
-    DATA(source_kind) = cl_abap_typedescr=>describe_by_data( source )->type_kind.
-    IF is_numeric( target_kind ) = abap_false OR is_text( source_kind ) = abap_false.
-      result = xsdbool( target = source ).
-      RETURN.
-    ENDIF.
-    " text compared with a number is rounded to the number's decimals first, so compare exactly
-    exact = source.
-    result = xsdbool( target = exact ).
-  ENDMETHOD.
-
-
-  METHOD is_numeric.
-    result = xsdbool( type_kind = cl_abap_typedescr=>typekind_int
-                   OR type_kind = cl_abap_typedescr=>typekind_int1
-                   OR type_kind = cl_abap_typedescr=>typekind_int2
-                   OR type_kind = cl_abap_typedescr=>typekind_packed
-                   OR type_kind = cl_abap_typedescr=>typekind_float
-                   OR type_kind = cl_abap_typedescr=>typekind_decfloat16
-                   OR type_kind = cl_abap_typedescr=>typekind_decfloat34 ).
-  ENDMETHOD.
-
-
-  METHOD is_text.
-    result = xsdbool( type_kind = cl_abap_typedescr=>typekind_char
-                   OR type_kind = cl_abap_typedescr=>typekind_string ).
   ENDMETHOD.
 
 
@@ -1294,8 +1290,12 @@ CLASS lcl_doubled_type IMPLEMENTATION.
                                    context = VALUE #( value1 = normalized_name ) ).
     ENDIF.
     IF description->kind = cl_abap_typedescr=>kind_class.
-      check_extensible( CAST #( description ) ).
-    ELSEIF description->kind <> cl_abap_typedescr=>kind_intf.
+      " ABAP Cloud code cannot reach the methods of the class ATDF generates for a class double
+      " by name, so the calls could not be routed to ATK
+      RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>not_an_interface
+                                   context = VALUE #( value1 = normalized_name ) ).
+    ENDIF.
+    IF description->kind <> cl_abap_typedescr=>kind_intf.
       RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>not_an_object_type
                                    context = VALUE #( value1 = normalized_name ) ).
     ENDIF.
@@ -1306,12 +1306,9 @@ CLASS lcl_doubled_type IMPLEMENTATION.
 
   METHOD constructor.
     doubled_type_name = type_name.
-    is_interface = xsdbool( description->kind = cl_abap_typedescr=>kind_intf ).
     add_methods_of( owner  = description
                     prefix = `` ).
-    IF is_interface = abap_true.
-      add_component_interfaces( description ).
-    ENDIF.
+    add_component_interfaces( description ).
   ENDMETHOD.
 
 
@@ -1350,26 +1347,6 @@ CLASS lcl_doubled_type IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD check_extensible.
-    DATA(class_name) = class_type->get_relative_name( ).
-    IF class_type->class_kind = cl_abap_classdescr=>classkind_final.
-      RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>final_class
-                                   context = VALUE #( value1 = class_name ) ).
-    ENDIF.
-    IF class_type->create_visibility = cl_abap_objectdescr=>private.
-      RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>private_creation
-                                   context = VALUE #( value1 = class_name ) ).
-    ENDIF.
-    DATA(constructor_description) = VALUE abap_methdescr( class_type->methods[ name = constructor_name ] OPTIONAL ).
-    DATA(mandatory) = VALUE abap_parmdescr( constructor_description-parameters[ is_optional = abap_false ] OPTIONAL ).
-    IF mandatory IS NOT INITIAL.
-      RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>mandatory_constructor
-                                   context = VALUE #( value1 = class_name
-                                                      value2 = mandatory-name ) ).
-    ENDIF.
-  ENDMETHOD.
-
-
   METHOD add_methods_of.
     LOOP AT owner->methods INTO DATA(description).
       DATA(method_name) = |{ prefix }{ description-name }|.
@@ -1396,7 +1373,7 @@ CLASS lcl_doubled_type IMPLEMENTATION.
 
 
   METHOD call_name_of.
-    result = COND #( WHEN is_interface = abap_true AND method_name NS component_separator
+    result = COND #( WHEN method_name NS component_separator
                      THEN |{ doubled_type_name }{ component_separator }{ method_name }|
                      ELSE method_name ).
   ENDMETHOD.
@@ -1436,12 +1413,8 @@ CLASS lcl_doubled_type IMPLEMENTATION.
 
 
   METHOD is_configurable.
-    " RTTI may leave the visibility of interface methods empty; they are always public
-    result = xsdbool( description-is_class = abap_false
-                      AND ( description-visibility = cl_abap_objectdescr=>public OR description-visibility IS INITIAL )
-                      AND description-is_final = abap_false
-                      AND description-alias_for IS INITIAL
-                      AND description-name <> constructor_name ).
+    " static methods cannot be doubled, and an alias is the same method as the one it names
+    result = xsdbool( description-is_class = abap_false AND description-alias_for IS INITIAL ).
   ENDMETHOD.
 
 ENDCLASS.

@@ -65,7 +65,7 @@ ENDCLASS.
 CLASS ltc_doubled_type DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
   PRIVATE SECTION.
     METHODS when_unknown_type_then_raises FOR TESTING.
-    METHODS when_final_class_then_raises FOR TESTING.
+    METHODS when_class_then_raises FOR TESTING.
     METHODS when_data_type_then_raises FOR TESTING.
     METHODS when_interface_then_described FOR TESTING.
     METHODS when_typo_then_suggests_name FOR TESTING.
@@ -83,8 +83,8 @@ CLASS ltc_doubled_type IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD when_final_class_then_raises.
-    assert_rejected( type_name = 'ZCL_ATK_TEST_SEALED' expected = zcx_atk=>final_class ).
+  METHOD when_class_then_raises.
+    assert_rejected( type_name = 'ZCL_ATK_TEST_EXTENSIBLE' expected = zcx_atk=>not_an_interface ).
   ENDMETHOD.
 
 
@@ -454,6 +454,7 @@ CLASS ltc_parameter_shapes DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURA
     METHODS given_generic_input_then_works FOR TESTING.
     METHODS given_generic_table_then_works FOR TESTING.
     METHODS given_generic_mismatch_fails FOR TESTING.
+    METHODS given_number_as_text_matches FOR TESTING.
     METHODS when_returns_double_then_same FOR TESTING.
 ENDCLASS.
 
@@ -554,6 +555,16 @@ CLASS ltc_parameter_shapes IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD given_number_as_text_matches.
+    stub->when( 'DESCRIBE' )->with( parameter = 'ANYTHING' value = 42 )->returns( `the answer` ).
+
+    DATA(description) = shapes->describe( `42` ).
+
+    cl_abap_unit_assert=>assert_equals( act = description exp = `the answer` msg = `Text of the number must match` ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `Text of the number must not fail` ).
+  ENDMETHOD.
+
+
   METHOD when_returns_double_then_same.
     DATA(factory) = lth_doubles=>factory( recorder ).
     DATA(other_double) = factory->create( type_name = 'ZIF_ATK_TEST_AUDIT_LOG'
@@ -565,29 +576,6 @@ CLASS ltc_parameter_shapes IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_true( act = xsdbool( log = expected_log )
                                       msg = `A double must be able to return another double` ).
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS ltc_class_double DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
-  PRIVATE SECTION.
-    METHODS given_class_then_doubled FOR TESTING.
-ENDCLASS.
-
-
-CLASS ltc_class_double IMPLEMENTATION.
-
-  METHOD given_class_then_doubled.
-    DATA(recorder) = NEW ltd_failure_recorder( ).
-    DATA(stub) = CAST zif_atk_stub( lth_doubles=>factory( recorder )->create( type_name = 'ZCL_ATK_TEST_EXTENSIBLE'
-                                                                              role      = lif_role=>stub ) ).
-    stub->when( 'GREET' )->with( parameter = 'NAME' value = `Ada` )->returns( `Hello Ada` ).
-    DATA(greeter) = CAST zcl_atk_test_extensible( stub->instance( ) ).
-
-    DATA(greeting) = greeter->greet( `Ada` ).
-
-    cl_abap_unit_assert=>assert_equals( act = greeting exp = `Hello Ada` msg = `A non-final class must be doubled` ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -862,7 +850,7 @@ CLASS ltc_exception_text IMPLEMENTATION.
   METHOD when_raised_then_text_has_fix.
     MESSAGE e102(zatk) WITH `ZCL_SAMPLE` INTO DATA(fix).
 
-    DATA(error) = NEW zcx_atk( problem = zcx_atk=>final_class context = VALUE #( value1 = `ZCL_SAMPLE` ) ).
+    DATA(error) = NEW zcx_atk( problem = zcx_atk=>not_an_interface context = VALUE #( value1 = `ZCL_SAMPLE` ) ).
 
     cl_abap_unit_assert=>assert_true( act = xsdbool( error->get_text( ) CS fix )
                                       msg = `The text must say how to fix the problem` ).

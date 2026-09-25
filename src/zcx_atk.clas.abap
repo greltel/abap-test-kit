@@ -34,29 +34,17 @@ CLASS zcx_atk DEFINITION
         fix  TYPE symsgno VALUE '101',
       END OF unknown_type.
     CONSTANTS:
-      "! &1 is not an interface or a class
+      "! &1 is a data type, not an interface
       BEGIN OF not_an_object_type,
         what TYPE symsgno VALUE '002',
         fix  TYPE symsgno VALUE '101',
       END OF not_an_object_type.
     CONSTANTS:
-      "! &1 is a final class, so no double can extend it
-      BEGIN OF final_class,
+      "! &1 is a class, and ATK doubles interfaces only
+      BEGIN OF not_an_interface,
         what TYPE symsgno VALUE '003',
         fix  TYPE symsgno VALUE '102',
-      END OF final_class.
-    CONSTANTS:
-      "! &1 is CREATE PRIVATE, so no double can extend it
-      BEGIN OF private_creation,
-        what TYPE symsgno VALUE '004',
-        fix  TYPE symsgno VALUE '102',
-      END OF private_creation.
-    CONSTANTS:
-      "! The constructor of &1 has the mandatory parameter &2
-      BEGIN OF mandatory_constructor,
-        what TYPE symsgno VALUE '005',
-        fix  TYPE symsgno VALUE '102',
-      END OF mandatory_constructor.
+      END OF not_an_interface.
     CONSTANTS:
       "! &1 has no instance method &2 that a double can take over; did you mean &3?
       BEGIN OF unknown_method_did_you_mean,
@@ -204,8 +192,8 @@ CLASS zcx_atk DEFINITION
                 context  TYPE ty_context      OPTIONAL
                 previous TYPE REF TO cx_root OPTIONAL.
 
-    "! Returns what went wrong, how to fix it, and the details, in this order.
-    "! @parameter result | The full text
+    " ZCX_ATK - public section, before the redefinition
+    " the text is what went wrong, how to fix it, and the details, in this order
     METHODS if_message~get_text REDEFINITION.
 
   PRIVATE SECTION.
@@ -257,3 +245,4 @@ CLASS zcx_atk IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
