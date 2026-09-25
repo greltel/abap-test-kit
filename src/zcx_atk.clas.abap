@@ -1,6 +1,6 @@
 "! <p class="shorttext synchronized" lang="EN">ABAP Test Kit: test double misuse or failed check</p>
 "! Raised when a test double cannot be created or configured as written. Its text always says
-"! what went wrong and how to fix it. Tests of ATK itself compare {@link .DATA:problem} with the
+"! what went wrong and how to fix it. Tests of ATK itself compare {@link zcx_atk.DATA:problem} with the
 "! constants of this class to check which problem occurred.
 CLASS zcx_atk DEFINITION
   PUBLIC
@@ -192,7 +192,6 @@ CLASS zcx_atk DEFINITION
                 context  TYPE ty_context      OPTIONAL
                 previous TYPE REF TO cx_root OPTIONAL.
 
-    " ZCX_ATK - public section, before the redefinition
     " the text is what went wrong, how to fix it, and the details, in this order
     METHODS if_message~get_text REDEFINITION.
 

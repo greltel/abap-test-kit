@@ -1,10 +1,12 @@
 "! <p class="shorttext synchronized" lang="EN">ABAP Test Kit: create test doubles</p>
 "! Entry point of the ABAP Test Kit. Creates the four kinds of test doubles from the name of a
 "! global interface. Pick the kind by what your test needs:
+"! <ul>
 "! <li>{@link zcl_atk.METH:dummy} - the collaborator must be passed in, but is never used</li>
 "! <li>{@link zcl_atk.METH:stub} - the code under test asks the collaborator for data</li>
 "! <li>{@link zcl_atk.METH:spy} - the code under test tells the collaborator to do something</li>
 "! <li>{@link zcl_atk.METH:mock} - every call must be declared up front, any other call fails</li>
+"! </ul>
 "! Classes are rejected: extract an interface and let the code depend on it, or double the
 "! class with CL_ABAP_TESTDOUBLE directly.
 CLASS zcl_atk DEFINITION
