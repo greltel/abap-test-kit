@@ -1,0 +1,29 @@
+{
+  "name": "abap-test-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ABAP Test Kit: fluent test doubles and assertions for ABAP Unit. Off-stack lint and unit test toolchain (abaplint + transpiler).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/greltel/abap-test-kit.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "abaplint abaplint.json",
+    "deps": "node transpiler/fetch_open_abap_core.mjs",
+    "transpile": "npm run deps && rimraf output && abap_transpile abap_transpile.json",
+    "unit": "node transpiler/run_unit_tests.mjs",
+    "unit:verbose": "node transpiler/run_unit_tests.mjs --verbose",
+    "test": "npm run transpile && npm run unit",
+    "ci": "npm run lint && npm test"
+  },
+  "devDependencies": {
+    "@abaplint/cli": "^2.120.59",
+    "@abaplint/runtime": "^2.13.92",
+    "@abaplint/transpiler-cli": "^2.13.92",
+    "rimraf": "^6.0.1"
+  }
+}
