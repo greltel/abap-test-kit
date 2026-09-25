@@ -10,8 +10,8 @@ All notable changes to this repository are listed here. Versions follow
 
 Test doubles on top of `CL_ABAP_TESTDOUBLE`.
 
-- `ZCL_ATK` with `dummy( )`, `stub( )`, `spy( )` and `mock( )` for global interfaces and
-  global classes that are not final.
+- `ZCL_ATK` with `dummy( )`, `stub( )`, `spy( )` and `mock( )` for global interfaces. Classes
+  are rejected with a message that points to an interface or to `CL_ABAP_TESTDOUBLE`.
 - Rules with `when( )`, `with( )`, `returns( )`, `sets( )` and `raises( )`; the most specific
   rule wins, and a call that matches no rule of a method fails the test.
 - Spy checks with `was_called( )->with( )->times( )` and `was_not_called( )`, after the act
