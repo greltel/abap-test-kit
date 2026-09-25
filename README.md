@@ -86,10 +86,11 @@ Object names follow `ZCL_ATK` / `ZIF_ATK_*` / `ZCX_ATK`.
 | [Mock](#mock) | `zcl_atk=>mock( )` | `ZIF_ATK_MOCK` | Strict double: every call is declared up front, any other call fails at once |
 
 Every double follows the same shape: `ZCL_ATK` is the only entry point and takes
-the name of a global interface, or of a global class that is not final, not
-`CREATE PRIVATE` and has no mandatory constructor parameters. Public instance
-methods that are not final can be configured; static, final and private
-methods cannot be doubled by the test double framework. `instance( )`
+the name of a global interface. The instance methods of the interface and of its
+component interfaces can be configured; static methods cannot be doubled.
+Classes are rejected: from ABAP Cloud code, the calls of a class double cannot be
+taken over by method name, so extract an interface and let the code depend on
+it, or double the class with `CL_ABAP_TESTDOUBLE` directly. `instance( )`
 hands out the object that is injected into the code under test. Rules and
 checks are fluent interfaces, method names, parameter names and values are
 checked against the doubled type while the test is set up, and errors surface
@@ -207,8 +208,8 @@ the code under test, so a `CATCH cx_root` in the code under test cannot hide
 them.
 
 ```text
-ZCL_ORDER_SERVICE is a final class, so no double can extend it. Extract an interface from
-ZCL_ORDER_SERVICE and let the code depend on it.
+ZCL_ORDER_SERVICE is a class, and ATK doubles interfaces only. Extract an interface from
+ZCL_ORDER_SERVICE, or double it with CL_ABAP_TESTDOUBLE.
 ```
 
 # Before and After
