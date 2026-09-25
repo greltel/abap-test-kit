@@ -1,0 +1,60 @@
+{
+  "input_folder": "src",
+  "input_filter": [],
+  "output_folder": "output",
+  "libs": [
+    {
+      "folder": "deps/open-abap-core",
+      "files": "/src/**/*.*",
+      "exclude_filter": [
+        "cl_abap_typedescr\\.clas",
+        "cl_abap_datadescr\\.clas",
+        "cl_abap_objectdescr\\.clas",
+        "cl_abap_classdescr\\.clas",
+        "kernel_create_data_handle\\.clas"
+      ]
+    },
+    {
+      "folder": "transpiler/open-abap-patches",
+      "files": "/**/*.abap"
+    },
+    {
+      "folder": "abaplint-stubs",
+      "files": "/**/*.abap",
+      "exclude_filter": [
+        "cl_abap_unit_assert",
+        "if_abap_unit_constant",
+        "cl_abap_testdouble"
+      ]
+    },
+    {
+      "folder": "transpiler/atdf",
+      "files": "/**/*.abap"
+    }
+  ],
+  "write_unit_tests": true,
+  "write_source_map": true,
+  "options": {
+    "ignoreSyntaxCheck": false,
+    "addFilenames": true,
+    "addCommonJS": true,
+    "unknownTypes": "compileError",
+    "setup": {
+      "filename": "../transpiler/setup.mjs",
+      "preFunction": "setup",
+      "postFunction": "afterLoad"
+    },
+    "skip": [
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_STUB",
+        "method": "WHEN_RAISES_THEN_CALLER_GETS"
+      },
+      {
+        "object": "ZCL_ATK_DEMO_ORDER_SERVICE",
+        "class": "LTC_WITH_ATK",
+        "method": "GIVEN_UNKNOWN_ORDER_THEN_RAISE"
+      }
+    ]
+  }
+}
