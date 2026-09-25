@@ -643,7 +643,7 @@ CLASS lth_atdf_gateway DEFINITION FINAL FOR TESTING.
     CONSTANTS unlimited_calls TYPE i VALUE 2147483647.
 
     METHODS route_method
-      IMPORTING double         TYPE REF TO object
+      IMPORTING atdf_double    TYPE REF TO object
                 doubled_method TYPE REF TO lcl_doubled_method
                 answer         TYPE REF TO if_abap_testdouble_answer.
 ENDCLASS.
@@ -1940,7 +1940,7 @@ CLASS lth_atdf_gateway IMPLEMENTATION.
 
   METHOD lif_atdf_gateway~route_calls.
     LOOP AT doubled_type->doubled_methods( ) INTO DATA(doubled_method).
-      route_method( double         = double
+      route_method( atdf_double    = double
                     doubled_method = doubled_method
                     answer         = answer ).
     ENDLOOP.
@@ -1951,12 +1951,12 @@ CLASS lth_atdf_gateway IMPLEMENTATION.
     DATA(call_name) = doubled_method->call_name( ).
     DATA(recording_arguments) = doubled_method->recording_arguments( ).
     TRY.
-        cl_abap_testdouble=>configure_call( double
+        cl_abap_testdouble=>configure_call( atdf_double
           )->ignore_all_parameters(
           )->times( unlimited_calls
           )->set_answer( answer ).
         " the method is known only at runtime, so the dynamic form is the only way to call it
-        CALL METHOD double->(call_name) PARAMETER-TABLE recording_arguments.
+        CALL METHOD atdf_double->(call_name) PARAMETER-TABLE recording_arguments.
       CATCH cx_root INTO DATA(error).
         " ATDF exceptions are not released for ABAP Cloud; whatever arrives becomes ZCX_ATK
         RAISE EXCEPTION NEW zcx_atk( problem  = zcx_atk=>atdf_route_failed
