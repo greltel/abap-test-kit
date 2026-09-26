@@ -51,6 +51,16 @@
         "method": "WHEN_RAISES_THEN_CALLER_GETS"
       },
       {
+        "object": "ZCL_ATK",
+        "class": "LTC_DOUBLED_TYPE",
+        "method": "GIVEN_STATIC_METHOD_IGNORED"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_OPTIONAL_LEFT_OUT_FAILS"
+      },
+      {
         "object": "ZCL_ATK_DEMO_ORDER_SERVICE",
         "class": "LTC_WITH_ATK",
         "method": "GIVEN_UNKNOWN_ORDER_THEN_RAISE"
