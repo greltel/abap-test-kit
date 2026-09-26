@@ -69,7 +69,17 @@ folders.
   `zcx_atk=>part_separator` (a blank: the ABAP Unit view of ADT shows a failure
   on one line and prints a line break as `#`), and every detail is one sentence
   of the form `Label: facts.` built with `lcl_text=>labeled( )` and
-  `lcl_text=>sentences( )`.
+  `lcl_text=>sentences( )`. A failure reported to ABAP Unit passes
+  `headline( )` (what went wrong) as `msg` and `explanation( )` (the fix and
+  the facts) as `detail`, so the message reads like a headline in the failure
+  list and the rest shows under it, in the Analysis of the SAP GUI result and
+  under the Details node of the ADT view. Message placeholders (`&1`) hold 50
+  characters; longer facts such as values and type names go into a labeled
+  sentence, never into a placeholder.
+  Every recorded call carries its origin (`lcl_call_site`), and every message
+  that lists calls shows it after the arguments as `from OBJECT=>METHOD,
+  line n of the method`; a failure at the call has it as the fact
+  `Called from:`.
   A message uses each placeholder once (abaplint `message_exists` counts them)
   and is at most 73 characters long. Exceptions of the test double framework
   are caught and translated, never passed on
@@ -136,7 +146,8 @@ test needs a parameter shape that does not exist yet.
 | `ltc_call_router` | Nothing escapes from the ATDF answer into the code under test |
 | `ltc_facade` | The entry points of `ZCL_ATK` |
 | `ltc_exception_text` | The three parts of a `ZCX_ATK` text, placeholders, the previous exception |
-| `ltc_arguments`, `ltc_name_hint`, `ltc_value_formatter`, `ltc_type_formatter` | How arguments, name suggestions, values and types are shown in messages |
+| `ltc_arguments`, `ltc_name_hint`, `ltc_value_formatter`, `ltc_type_formatter`, `ltc_call_journal` | How arguments, name suggestions, values, types and recorded calls are shown in messages |
+| `ltc_call_site` | The origin of a call from the lines of the XCO call stack: which frame is the code under test, how a line is taken apart. `when_asked_then_names_caller` reads the real stack and runs on a system only |
 
 Failures that happen during the act step are reported through a local
 interface, so the tests replace the reporter with `ltd_failure_recorder` and
@@ -182,7 +193,8 @@ there and which tests only run on a real system.
 | `lcl_arguments` | Parameter names and values of a rule, a check or a recorded call, and the comparison between them |
 | `lcl_call_rule` | One rule or expectation: conditions and answer |
 | `lcl_rulebook` | The rules of one double; picks the best rule for a call |
-| `lcl_call_journal` | Every call the double received, with its arguments |
+| `lcl_call_journal` | Every call the double received, with its arguments and where it came from |
+| `lcl_call_site` | The method and line of the code under test that called the double, read from the XCO call stack (`xco_cp=>current->call_stack`, ADT format, include line numbers) while the double answers; `CL_ABAP_GET_CALL_STACK` is not permitted in ABAP for Cloud Development. The frames of ATK, of SAP (`[system]`) and of the test double framework (`CL_ATD*`, `CL_ABAP_TESTDOUBLE*`, generated `%_*`) are skipped |
 | `lcl_call_router` | The answer object the test double framework calls |
 | `lcl_call_verification` | A `was_called( )` check |
 | `lcl_double` | The object behind `ZIF_ATK_DUMMY`, `ZIF_ATK_STUB`, `ZIF_ATK_SPY` and `ZIF_ATK_MOCK` |
@@ -209,6 +221,8 @@ on a system, this is where to look:
 | `given_generic_table_then_works` or `given_generic_input_then_works` fails | The recording call can fill generically typed parameters | `lcl_doubled_method=>concrete_type_for` |
 | `when_raises_then_caller_gets` fails | `IF_ABAP_TESTDOUBLE_RESULT->raise_exception( )` records the exception and the framework raises it after the answer | `lcl_call_rule=>answer` |
 | A failure during the act step does not show up | `CL_ABAP_UNIT_ASSERT=>fail( quit = no )` inside the answer object | `lcl_unit_failure_reporter` |
+| `when_unwanted_names_caller` or `when_asked_then_names_caller` fails, or a failure names a frame of the framework as the origin | The ADT format of the XCO call stack: `OBJECT [system]    event [method]` with the line number, innermost frame first, and how the frames of the generated double and of `CL_ATD_*` are written | `lcl_call_site=>parse`, `is_machinery`; add the object pattern to the `framework` constants |
+| The origins have no line numbers, or the numbers are those of the source view | The line number flavor: `include` counts from the `METHOD` statement, `source` gives the line of the source view through source scans and costs more on every call | `lcl_call_site=>frames`, message `234` |
 | abapGit: *ABAP Language Version of linked package is not compatible with repository settings*, or an object *has ABAP language version … but repository is set to …* | The packages were created with *Standard ABAP*, for example by abapGit itself | Set *ABAP for Cloud Development* on `ZATK`, `ZATK_TEST` and `ZATK_DEMO` in ADT and pull again |
 
 # Releasing
