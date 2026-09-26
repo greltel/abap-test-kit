@@ -286,9 +286,9 @@ audit_log->verify( ).
 ## Error messages
 
 Every mistake in a test surfaces through `ZCX_ATK`. Its text has the same three parts every
-time, one line each: what went wrong, how to fix it, and the facts - the arguments of the
+time, in this order: what went wrong, how to fix it, and the facts - the arguments of the
 call, the rules that exist, the closest one and where it differs, or what a value would
-become. Close misspellings of method and parameter names get a suggestion; names that are
+become. The examples below are broken into lines here; ABAP Unit shows them as one line. Close misspellings of method and parameter names get a suggestion; names that are
 far from every candidate get the list of candidates with their kinds. The texts live in
 message class `ZATK`; exceptions of the test double framework never reach the test
 untranslated. Failures during the act step are recorded without stopping the code under
@@ -519,7 +519,7 @@ refactoring in ADT does not update them.
 * Released APIs only (release contract C1), no dependencies besides SAP's own classes
 * Built on `CL_ABAP_TESTDOUBLE` — no own mocking engine; both can be used in the same test class
 * Tests in arrange-act-assert order: spies are checked after the act step
-* Messages in three lines - what went wrong, how to fix it, the facts; framework exceptions never reach the test untranslated
+* Messages in three parts - what went wrong, how to fix it, the facts; framework exceptions never reach the test untranslated
 * Method names, parameter names and values checked against the doubled type with RTTI
 * Small public surface: one facade class, fluent interfaces and one exception class; everything else is local to `ZCL_ATK`
 * Test code only — `ZCL_ATK` is `FOR TESTING`, so production code cannot depend on it
