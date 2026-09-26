@@ -78,6 +78,11 @@
         "object": "ZCL_ATK",
         "class": "LTC_CALL_SITE",
         "method": "WHEN_ASKED_THEN_NAMES_CALLER"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_STUB",
+        "method": "WHEN_UNMATCHED_NAMES_CALLER"
       }
     ]
   }
