@@ -53,8 +53,8 @@ CLASS lcl_text DEFINITION FINAL CREATE PRIVATE.
       IMPORTING texts         TYPE ty_texts
       RETURNING VALUE(result) TYPE string.
 
-    "! Puts each text on its own line, for the details of a failure.
-    CLASS-METHODS as_lines
+    "! Joins the sentences of the details of a failure, the way ZCX_ATK joins its parts.
+    CLASS-METHODS sentences
       IMPORTING texts         TYPE ty_texts
       RETURNING VALUE(result) TYPE string.
 
@@ -821,9 +821,9 @@ CLASS lcl_text IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD as_lines.
+  METHOD sentences.
     result = concat_lines_of( table = texts
-                              sep   = cl_abap_char_utilities=>newline ).
+                              sep   = zcx_atk=>part_separator ).
   ENDMETHOD.
 
 
@@ -1812,7 +1812,7 @@ CLASS lcl_call_journal IMPLEMENTATION.
       facts = describe_closest_call( doubled_method = doubled_method
                                      filter         = filter ).
     ENDIF.
-    result = lcl_text=>as_lines( VALUE #( ( expected ) ( facts ) ) ).
+    result = lcl_text=>sentences( VALUE #( ( expected ) ( facts ) ) ).
   ENDMETHOD.
 
 
@@ -1843,7 +1843,7 @@ CLASS lcl_call_journal IMPLEMENTATION.
     DATA(differing) = filter->names_not_met_by( closest ).
     IF differing IS NOT INITIAL.
       MESSAGE e207(zatk) INTO label.
-      result = lcl_text=>as_lines( VALUE #( ( result )
+      result = lcl_text=>sentences( VALUE #( ( result )
                                          ( lcl_text=>labeled( label = label
                                                               text  = lcl_text=>join( differing ) ) ) ) ).
     ENDIF.
@@ -2144,7 +2144,7 @@ CLASS lcl_rulebook IMPLEMENTATION.
       INSERT lcl_text=>labeled( label = closest_label
                                 text  = lcl_text=>join( closest->unmet_conditions( arguments ) ) ) INTO TABLE facts.
     ENDIF.
-    result = lcl_text=>as_lines( facts ).
+    result = lcl_text=>sentences( facts ).
   ENDMETHOD.
 
 
@@ -2296,7 +2296,7 @@ CLASS lcl_call_router IMPLEMENTATION.
     result = NEW #( problem = problem
                     context = VALUE #( value1  = first_value
                                        value2  = doubled_method->name( )
-                                       details = lcl_text=>as_lines( facts ) ) ).
+                                       details = lcl_text=>sentences( facts ) ) ).
   ENDMETHOD.
 
 

@@ -1,8 +1,8 @@
 "! <p class="shorttext synchronized" lang="EN">ABAP Test Kit: test double misuse or failed check</p>
 "! Raised when a test double cannot be created or configured as written. Its text always says
-"! what went wrong, how to fix it and, on further lines, the facts involved: arguments, rules,
-"! the closest call. Tests of ATK itself compare {@link zcx_atk.DATA:problem} with the constants
-"! of this class to check which problem occurred.
+"! what went wrong, how to fix it and then the facts involved: arguments, rules, the closest
+"! call. Tests of ATK itself compare {@link zcx_atk.DATA:problem} with the constants of this
+"! class to check which problem occurred.
 CLASS zcx_atk DEFINITION
   PUBLIC
   INHERITING FROM cx_no_check
@@ -11,6 +11,10 @@ CLASS zcx_atk DEFINITION
 
   PUBLIC SECTION.
     INTERFACES if_t100_dyn_msg.
+
+    "! Between what went wrong, the fix and each fact. A blank, because the ABAP Unit view of
+    "! ADT shows a failure on one line and prints a line break as #
+    CONSTANTS part_separator TYPE string VALUE ` `.
 
     TYPES:
       "! A problem is a pair of messages in message class ZATK: what went wrong, how to fix it
@@ -187,7 +191,7 @@ CLASS zcx_atk DEFINITION
 
     "! Which problem occurred; one of the constants of this class
     DATA problem TYPE ty_problem READ-ONLY.
-    "! Facts appended to the text on their own lines, for example the arguments of the calls involved
+    "! Facts appended to the text, one sentence each, for example the arguments of the calls involved
     DATA details TYPE string READ-ONLY.
 
     "! Creates the exception for one of the problems defined as constants of this class.
@@ -199,14 +203,12 @@ CLASS zcx_atk DEFINITION
                 context  TYPE ty_context      OPTIONAL
                 previous TYPE REF TO cx_root OPTIONAL.
 
-    " the text is what went wrong, how to fix it, and the details, one line each
+    " the text is what went wrong, how to fix it, and the details, in this order
     METHODS if_message~get_text REDEFINITION.
 
   PRIVATE SECTION.
     CONSTANTS message_class TYPE symsgid VALUE 'ZATK'.
     CONSTANTS error_message TYPE symsgty VALUE 'E'.
-    "! Separates what went wrong, the fix and each detail; ADT shows the lines as written
-    CONSTANTS line_break TYPE abap_char1 VALUE cl_abap_char_utilities=>newline.
 
     CONSTANTS: BEGIN OF placeholder,
                  first  TYPE scx_attrname VALUE 'IF_T100_DYN_MSG~MSGV1',
@@ -239,9 +241,9 @@ CLASS zcx_atk IMPLEMENTATION.
 
 
   METHOD if_message~get_text.
-    result = |{ super->if_message~get_text( ) }{ line_break }{ fix_text( ) }|.
+    result = |{ super->if_message~get_text( ) }{ part_separator }{ fix_text( ) }|.
     IF details IS NOT INITIAL.
-      result = |{ result }{ line_break }{ details }|.
+      result = |{ result }{ part_separator }{ details }|.
     ENDIF.
   ENDMETHOD.
 
@@ -253,4 +255,5 @@ CLASS zcx_atk IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
 

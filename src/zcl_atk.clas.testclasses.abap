@@ -1714,7 +1714,7 @@ CLASS ltc_exception_text DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATI
     METHODS when_details_then_appended FOR TESTING.
     METHODS when_placeholders_then_filled FOR TESTING.
     METHODS when_previous_then_kept FOR TESTING.
-    METHODS when_text_then_one_line_each FOR TESTING.
+    METHODS when_text_then_what_fix_facts FOR TESTING.
 ENDCLASS.
 
 
@@ -1753,19 +1753,17 @@ CLASS ltc_exception_text IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD when_text_then_one_line_each.
-    DATA lines TYPE ty_texts.
+  METHOD when_text_then_what_fix_facts.
+    MESSAGE e006(zatk) WITH `ZIF_SAMPLE` `GO` INTO DATA(what).
+    MESSAGE e104(zatk) INTO DATA(fix).
     DATA(error) = NEW zcx_atk( problem = zcx_atk=>unknown_method
                                context = VALUE #( value1 = `ZIF_SAMPLE` value2 = `GO` details = `Available: RUN.` ) ).
 
-    SPLIT error->get_text( ) AT cl_abap_char_utilities=>newline INTO TABLE lines.
+    DATA(text) = error->get_text( ).
 
-    cl_abap_unit_assert=>assert_equals( act = lines( lines )
-                                        exp = 3
-                                        msg = `What went wrong, the fix and the details take one line each` ).
-    cl_abap_unit_assert=>assert_equals( act = lines[ 3 ]
-                                        exp = `Available: RUN.`
-                                        msg = `The details come last` ).
+    cl_abap_unit_assert=>assert_equals( act = text
+                                        exp = |{ what } { fix } Available: RUN.|
+                                        msg = `The text is what went wrong, the fix and the facts, in this order` ).
   ENDMETHOD.
 
 
