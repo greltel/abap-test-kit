@@ -6,6 +6,26 @@ All notable changes to this repository are listed here. Versions follow
 
 ## Unreleased
 
+### Added
+
+- Every recorded call carries the method of the code under test that made it and the
+  line within that method, read from the XCO call stack while the double answers
+  (`from ZCL_ORDER_SERVICE=>ZIF_ORDER_SERVICE~CANCEL, line 6 of the method`). A failure
+  at the call - an unmatched or unwanted call, a dummy that is called - has it as the fact
+  `Called from:`; the matching and closest calls of a spy or mock failure show it after
+  their arguments.
+
+### Changed
+
+- A failure reported to ABAP Unit has what went wrong as its message and the fix and the
+  facts as its detail, so the failure list stays readable and the rest shows under it
+  (Analysis in the SAP GUI, Details in ADT). `zcx_atk->get_text( )` is unchanged.
+- The facts about a value that does not fit name the type of the value and what the
+  parameter would hold instead as labeled sentences (`The value has the type:`,
+  `Instead, the parameter would hold:`), so long type names are no longer cut at the
+  50 characters of a message placeholder.
+- 148 unit tests.
+
 ## [1.0.0] - 2026-09-26
 
 ### Added
