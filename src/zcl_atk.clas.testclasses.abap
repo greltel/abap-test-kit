@@ -547,7 +547,8 @@ CLASS ltc_value_conversion IMPLEMENTATION.
 
 
   METHOD given_lossy_then_shows_result.
-    MESSAGE e226(zatk) WITH `'GRE'` INTO DATA(would_hold).
+    MESSAGE e226(zatk) INTO DATA(would_hold).
+    would_hold = |{ would_hold } 'GRE'.|.
     DATA(country_name) = method_of( type_name = 'ZIF_ATK_TEST_SHAPES' method_name = 'COUNTRY_NAME' ).
 
     DATA(error) = input_error( doubled_method = country_name parameter_name = 'CODE' value = `GREECE` ).
@@ -578,7 +579,8 @@ CLASS ltc_value_conversion IMPLEMENTATION.
     DATA(save) = method_of( type_name = 'ZIF_ATK_TEST_SHAPES' method_name = 'SAVE' ).
     DATA(other) = VALUE zif_atk_demo_order_repo=>ty_order( id = '4711' ).
     DATA(other_type) = cl_abap_typedescr=>describe_by_data( other )->absolute_name.
-    MESSAGE e225(zatk) WITH other_type INTO DATA(has_the_type).
+    MESSAGE e225(zatk) INTO DATA(has_the_type).
+    has_the_type = |{ has_the_type } { other_type }.|.
 
     DATA(error) = input_error( doubled_method = save parameter_name = 'ORDER' value = other ).
 
@@ -1149,6 +1151,7 @@ CLASS ltc_spy DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     METHODS when_not_called_then_passes FOR TESTING.
     METHODS when_called_then_unwanted FOR TESTING.
     METHODS when_unwanted_then_lists_calls FOR TESTING.
+    METHODS when_unwanted_names_caller FOR TESTING.
     METHODS when_times_negative_raises FOR TESTING.
     METHODS when_with_unknown_param_raises FOR TESTING.
     METHODS when_unknown_method_raises FOR TESTING.
@@ -1251,6 +1254,20 @@ CLASS ltc_spy IMPLEMENTATION.
     DATA(text) = recorder->last_text( ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( text CS `0000004711` AND text CS `SHIPPED` )
                                       msg = `The failure must list the recorded calls` ).
+  ENDMETHOD.
+
+
+  METHOD when_unwanted_names_caller.
+    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
+    MESSAGE e233(zatk) INTO DATA(called_from).
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
+
+    spy->was_not_called( 'WRITE' ).
+
+    DATA(text) = recorder->last_text( ).
+    DATA(names_caller) = xsdbool( text CS called_from AND text CS `ZCL_ATK=>WHEN_UNWANTED_NAMES_CALLER` ).
+    cl_abap_unit_assert=>assert_true( act = names_caller
+                                      msg = `The failure must say which method called the double` ).
   ENDMETHOD.
 
 
@@ -1616,6 +1633,219 @@ CLASS ltc_call_router IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS ltc_call_journal DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+  PRIVATE SECTION.
+    METHODS given_origin_then_shown FOR TESTING.
+    METHODS given_no_origin_then_args_only FOR TESTING.
+
+    METHODS journal_with_one_call
+      IMPORTING origin        TYPE string
+      RETURNING VALUE(result) TYPE string.
+ENDCLASS.
+
+
+CLASS ltc_call_journal IMPLEMENTATION.
+
+  METHOD given_origin_then_shown.
+    MESSAGE e232(zatk) INTO DATA(from).
+
+    DATA(text) = journal_with_one_call( `ZCL_ORDER_SERVICE=>CANCEL line 6` ).
+
+    DATA(expected) = |ORDER_ID = '4711' { from } ZCL_ORDER_SERVICE=>CANCEL line 6|.
+    cl_abap_unit_assert=>assert_true( act = xsdbool( text CS expected )
+                                      msg = `A recorded call shows where it came from` ).
+  ENDMETHOD.
+
+
+  METHOD given_no_origin_then_args_only.
+    MESSAGE e232(zatk) INTO DATA(from).
+
+    DATA(text) = journal_with_one_call( `` ).
+
+    cl_abap_unit_assert=>assert_true( act = xsdbool( text CS `(ORDER_ID = '4711')` AND text NS | { from } | )
+                                      msg = `Without a known origin only the arguments are shown` ).
+  ENDMETHOD.
+
+
+  METHOD journal_with_one_call.
+    DATA(get_order) = lcl_doubled_type=>describe( 'ZIF_ATK_TEST_ORDERS' )->find_method( 'GET_ORDER' ).
+    DATA(arguments) = NEW lcl_arguments( ).
+    arguments->put( name  = 'ORDER_ID'
+                    value = NEW string( `4711` ) ).
+    DATA(journal) = NEW lcl_call_journal( ).
+    journal->record( doubled_method = get_order
+                     arguments      = arguments
+                     origin         = origin ).
+    result = journal->describe_calls( get_order ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_call_site DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+  PRIVATE SECTION.
+    METHODS when_asked_then_names_caller FOR TESTING.
+    METHODS given_stack_then_code_tested FOR TESTING.
+    METHODS given_direct_call_then_test FOR TESTING.
+    METHODS given_only_machinery_empty FOR TESTING.
+    METHODS given_no_line_then_name_only FOR TESTING.
+    METHODS when_parsed_then_parts FOR TESTING.
+    METHODS given_number_in_name_ignored FOR TESTING.
+    METHODS given_number_anywhere_found FOR TESTING.
+    METHODS given_own_frames_machinery FOR TESTING.
+    METHODS given_framework_then_machinery FOR TESTING.
+
+    METHODS origin_of
+      IMPORTING frames        TYPE string_table
+      RETURNING VALUE(result) TYPE string.
+ENDCLASS.
+
+
+CLASS ltc_call_site IMPLEMENTATION.
+
+  METHOD when_asked_then_names_caller.
+    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
+    DATA(origin) = lcl_call_site=>of_current_call( ).
+
+    cl_abap_unit_assert=>assert_true( act = xsdbool( origin CS `ZCL_ATK=>WHEN_ASKED_THEN_NAMES_CALLER` )
+                                      msg = |The origin must be this test method, not "{ origin }"| ).
+  ENDMETHOD.
+
+
+  METHOD given_stack_then_code_tested.
+    " the stack while a double answers, innermost frame first, as XCO writes it for ADT
+    DATA(frames) = VALUE string_table(
+      ( `ZCL_ATK    frames [method] 4` )
+      ( `ZCL_ATK    of_current_call [method] 2` )
+      ( `ZCL_ATK    if_abap_testdouble_answer~answer [method] 9` )
+      ( `CL_ATD_ANSWER_MAIN [system]    if_atd_answer~get_answer [method] 12` )
+      ( `%_T00004S00000001O0000000002    zif_order_service~cancel [method] 3` )
+      ( `ZCL_ORDER_SERVICE    zif_order_service~cancel [method] 6` )
+      ( `ZCL_ORDER_SERVICE    when_cancelled_then_logged [method] 14` )
+      ( `CL_AUNIT_TEST_CLASS [system]    invoke_test_method [method] 33` ) ).
+    MESSAGE e234(zatk) WITH `6` INTO DATA(line).
+
+    cl_abap_unit_assert=>assert_equals( act = origin_of( frames )
+                                        exp = |ZCL_ORDER_SERVICE=>ZIF_ORDER_SERVICE~CANCEL, { line }|
+                                        msg = `The origin is the method of the code under test` ).
+  ENDMETHOD.
+
+
+  METHOD given_direct_call_then_test.
+    " a test that calls the double itself is the origin, also inside ZCL_ATK's own test include
+    DATA(frames) = VALUE string_table(
+      ( `ZCL_ATK    frames [method] 4` )
+      ( `ZCL_ATK    if_abap_testdouble_answer~answer [method] 9` )
+      ( `ZCL_ATK    when_unwanted_names_caller [method] 3` )
+      ( `CL_AUNIT_TEST_CLASS [system]    invoke_test_method [method] 33` ) ).
+    MESSAGE e234(zatk) WITH `3` INTO DATA(line).
+
+    cl_abap_unit_assert=>assert_equals( act = origin_of( frames )
+                                        exp = |ZCL_ATK=>WHEN_UNWANTED_NAMES_CALLER, { line }|
+                                        msg = `A test that calls the double directly is the origin` ).
+  ENDMETHOD.
+
+
+  METHOD given_only_machinery_empty.
+    DATA(frames) = VALUE string_table(
+      ( `ZCL_ATK    frames [method] 4` )
+      ( `CL_AUNIT_TEST_CLASS [system]    invoke_test_method [method] 33` )
+      ( `SAPLSABP_UNIT_SBOX [system]    _aunit_sbox_msg_x_test_method [function] 120` )
+      ( `RS_AUNIT_SBOX_CLASS_TEST_INT [system]    start-of-selection [event] 8` ) ).
+
+    cl_abap_unit_assert=>assert_initial( act = origin_of( frames )
+                                         msg = `Without a frame of user code there is no origin` ).
+  ENDMETHOD.
+
+
+  METHOD given_no_line_then_name_only.
+    DATA(frames) = VALUE string_table( ( `ZCL_ORDER_SERVICE    zif_order_service~cancel [method]` ) ).
+
+    cl_abap_unit_assert=>assert_equals( act = origin_of( frames )
+                                        exp = `ZCL_ORDER_SERVICE=>ZIF_ORDER_SERVICE~CANCEL`
+                                        msg = `Without a line number only the method is named` ).
+  ENDMETHOD.
+
+
+  METHOD when_parsed_then_parts.
+    DATA(frame) = lcl_call_site=>parse( `CL_AUNIT_TEST_CLASS [system]    invoke_test_method [method] 33` ).
+
+    cl_abap_unit_assert=>assert_equals( act = frame
+                                        exp = VALUE lcl_call_site=>ty_frame( object    = `CL_AUNIT_TEST_CLASS`
+                                                                             event     = `INVOKE_TEST_METHOD`
+                                                                             line      = `33`
+                                                                             is_system = abap_true )
+                                        msg = `Object, event, line and the system marker are taken apart` ).
+  ENDMETHOD.
+
+
+  METHOD given_number_in_name_ignored.
+    DATA(frame) = lcl_call_site=>parse( `ZCL_S4_SERVICE2    zif_s4_service2~get_v2 [method]` ).
+
+    cl_abap_unit_assert=>assert_equals( act = frame-line
+                                        exp = ``
+                                        msg = `A digit inside a name is not a line number` ).
+  ENDMETHOD.
+
+
+  METHOD given_number_anywhere_found.
+    " the format may put the line number before or after the event, with any spacing; the parser
+    " takes the last number that stands on its own
+    DATA(before_event) = lcl_call_site=>parse( `ZCL_S4_SERVICE2 (7)    get_v2 [method]` ).
+    DATA(after_event) = lcl_call_site=>parse( `ZCL_S4_SERVICE2  get_v2 [method]  line 7` ).
+
+    cl_abap_unit_assert=>assert_equals( act = before_event-line
+                                        exp = `7`
+                                        msg = `A line number next to the object is found` ).
+    cl_abap_unit_assert=>assert_equals( act = after_event-line
+                                        exp = `7`
+                                        msg = `A line number after the event is found` ).
+    cl_abap_unit_assert=>assert_equals( act = after_event-event
+                                        exp = `GET_V2`
+                                        msg = `The event follows the object whatever the spacing` ).
+  ENDMETHOD.
+
+
+  METHOD given_own_frames_machinery.
+    DATA(own_frames) = VALUE string_table(
+      ( `ZCL_ATK    frames [method] 4` )
+      ( `ZCL_ATK    of_current_call [method] 2` )
+      ( `ZCL_ATK    if_abap_testdouble_answer~answer [method] 9` )
+      ( `ZCL_ATK    lcl_call_site=>frames [method] 4` )
+      ( `ZCL_ATK    lcl_call_router->if_abap_testdouble_answer~answer [method] 9` ) ).
+
+    LOOP AT own_frames INTO DATA(line).
+      cl_abap_unit_assert=>assert_true( act = lcl_call_site=>is_machinery( lcl_call_site=>parse( line ) )
+                                        msg = |ATK's own frame "{ line }" is not an origin| ).
+    ENDLOOP.
+    DATA(test_frame) = lcl_call_site=>parse( `ZCL_ATK    when_frames_are_read [method] 5` ).
+    cl_abap_unit_assert=>assert_equals( act = lcl_call_site=>is_machinery( test_frame )
+                                        exp = abap_false
+                                        msg = `A test method of ZCL_ATK is an origin` ).
+  ENDMETHOD.
+
+
+  METHOD given_framework_then_machinery.
+    DATA(framework_frames) = VALUE string_table(
+      ( `CL_ATD_ANSWER_MAIN    if_atd_answer~get_answer [method] 12` )
+      ( `CL_ABAP_TESTDOUBLE    configure_call [method] 5` )
+      ( `%_T00004S00000001O0000000002    zif_order_service~cancel [method] 3` )
+      ( `CL_AUNIT_TEST_CLASS [system]    invoke_test_method [method] 33` ) ).
+
+    LOOP AT framework_frames INTO DATA(line).
+      cl_abap_unit_assert=>assert_true( act = lcl_call_site=>is_machinery( lcl_call_site=>parse( line ) )
+                                        msg = |The framework frame "{ line }" is not an origin| ).
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD origin_of.
+    result = lcl_call_site=>origin_in( frames ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS ltc_facade DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
   PRIVATE SECTION.
     METHODS when_dummy_then_instance_fits FOR TESTING.
@@ -1715,6 +1945,8 @@ CLASS ltc_exception_text DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATI
     METHODS when_placeholders_then_filled FOR TESTING.
     METHODS when_previous_then_kept FOR TESTING.
     METHODS when_text_then_what_fix_facts FOR TESTING.
+    METHODS when_headline_then_what_only FOR TESTING.
+    METHODS when_explanation_fix_and_facts FOR TESTING.
 ENDCLASS.
 
 
@@ -1764,6 +1996,32 @@ CLASS ltc_exception_text IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( act = text
                                         exp = |{ what } { fix } Available: RUN.|
                                         msg = `The text is what went wrong, the fix and the facts, in this order` ).
+  ENDMETHOD.
+
+
+  METHOD when_headline_then_what_only.
+    MESSAGE e006(zatk) WITH `ZIF_SAMPLE` `GO` INTO DATA(what).
+    DATA(error) = NEW zcx_atk( problem = zcx_atk=>unknown_method
+                               context = VALUE #( value1 = `ZIF_SAMPLE` value2 = `GO` details = `Available: RUN.` ) ).
+
+    DATA(headline) = error->headline( ).
+
+    cl_abap_unit_assert=>assert_equals( act = headline
+                                        exp = what
+                                        msg = `The headline is what went wrong, the message of the failure` ).
+  ENDMETHOD.
+
+
+  METHOD when_explanation_fix_and_facts.
+    MESSAGE e104(zatk) INTO DATA(fix).
+    DATA(error) = NEW zcx_atk( problem = zcx_atk=>unknown_method
+                               context = VALUE #( value1 = `ZIF_SAMPLE` value2 = `GO` details = `Available: RUN.` ) ).
+
+    DATA(explanation) = error->explanation( ).
+
+    cl_abap_unit_assert=>assert_equals( act = explanation
+                                        exp = |{ fix } Available: RUN.|
+                                        msg = `The explanation is the fix and the facts, the detail of the failure` ).
   ENDMETHOD.
 
 

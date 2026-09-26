@@ -203,7 +203,17 @@ CLASS zcx_atk DEFINITION
                 context  TYPE ty_context      OPTIONAL
                 previous TYPE REF TO cx_root OPTIONAL.
 
-    " the text is what went wrong, how to fix it, and the details, in this order
+    "! What went wrong, in one sentence: the message of an ABAP Unit failure.
+    "! @parameter result | The first part of the text
+    METHODS headline
+      RETURNING VALUE(result) TYPE string.
+
+    "! How to fix it, followed by the facts: the detail of an ABAP Unit failure.
+    "! @parameter result | The second and third part of the text
+    METHODS explanation
+      RETURNING VALUE(result) TYPE string.
+
+    " the text is the headline followed by the explanation
     METHODS if_message~get_text REDEFINITION.
 
   PRIVATE SECTION.
@@ -216,7 +226,9 @@ CLASS zcx_atk DEFINITION
                  third  TYPE scx_attrname VALUE 'IF_T100_DYN_MSG~MSGV3',
                END OF placeholder.
 
-    METHODS fix_text
+    "! The message with the placeholders of this exception filled in
+    METHODS message_text
+      IMPORTING number        TYPE symsgno
       RETURNING VALUE(result) TYPE string.
 
 ENDCLASS.
@@ -240,16 +252,26 @@ CLASS zcx_atk IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD if_message~get_text.
-    result = |{ super->if_message~get_text( ) }{ part_separator }{ fix_text( ) }|.
+  METHOD headline.
+    result = message_text( problem-what ).
+  ENDMETHOD.
+
+
+  METHOD explanation.
+    result = message_text( problem-fix ).
     IF details IS NOT INITIAL.
       result = |{ result }{ part_separator }{ details }|.
     ENDIF.
   ENDMETHOD.
 
 
-  METHOD fix_text.
-    MESSAGE ID message_class TYPE error_message NUMBER problem-fix
+  METHOD if_message~get_text.
+    result = |{ headline( ) }{ part_separator }{ explanation( ) }|.
+  ENDMETHOD.
+
+
+  METHOD message_text.
+    MESSAGE ID message_class TYPE error_message NUMBER number
             WITH if_t100_dyn_msg~msgv1 if_t100_dyn_msg~msgv2 if_t100_dyn_msg~msgv3
             INTO result.
   ENDMETHOD.

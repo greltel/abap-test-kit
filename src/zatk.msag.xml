@@ -432,13 +432,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>225</MSGNR>
-     <TEXT>The value has the type &amp;1.</TEXT>
+     <TEXT>The value has the type:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>226</MSGNR>
-     <TEXT>The parameter would hold &amp;1 instead.</TEXT>
+     <TEXT>Instead, the parameter would hold:</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -469,6 +469,24 @@
      <ARBGB>ZATK</ARBGB>
      <MSGNR>231</MSGNR>
      <TEXT>table of &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>232</MSGNR>
+     <TEXT>from</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>233</MSGNR>
+     <TEXT>Called from:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>234</MSGNR>
+     <TEXT>line &amp;1 of the method</TEXT>
     </T100>
    </T100>
   </asx:values>
