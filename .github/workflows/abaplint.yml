@@ -9,8 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+      - name: Install toolchain
+        run: npm ci
       - name: Run abaplint in ABAP Cloud mode
-        run: npx @abaplint/cli@latest abaplint.json
+        run: npm run lint
