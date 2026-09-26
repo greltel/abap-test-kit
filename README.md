@@ -537,7 +537,7 @@ refactoring in ADT does not update them.
 * Test code only — `ZCL_ATK` is `FOR TESTING`, so production code cannot depend on it
 * Clean Code following the [Clean ABAP Style Guides](https://github.com/SAP/styleguides/blob/main/clean-abap/CleanABAP.md)
 * Modern ABAP syntax (7.58 / 9.14) — expressions, inline declarations, string templates
-* 148 unit tests of the library run with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, and off-stack on every push with the abaplint transpiler; abaplint on every push
+* 149 unit tests of the library run with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, and off-stack on every push with the abaplint transpiler; abaplint on every push
 * Documented with ABAP Doc on every public declaration
 
 # To-Do
