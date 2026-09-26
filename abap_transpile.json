@@ -30,6 +30,10 @@
     {
       "folder": "transpiler/atdf",
       "files": "/**/*.abap"
+    },
+    {
+      "folder": "transpiler/xco",
+      "files": "/**/*.abap"
     }
   ],
   "write_unit_tests": true,
@@ -64,6 +68,16 @@
         "object": "ZCL_ATK_DEMO_ORDER_SERVICE",
         "class": "LTC_WITH_ATK",
         "method": "GIVEN_UNKNOWN_ORDER_THEN_RAISE"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_SPY",
+        "method": "WHEN_UNWANTED_NAMES_CALLER"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_CALL_SITE",
+        "method": "WHEN_ASKED_THEN_NAMES_CALLER"
       }
     ]
   }
