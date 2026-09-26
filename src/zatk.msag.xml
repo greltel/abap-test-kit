@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
@@ -42,13 +42,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>008</MSGNR>
-     <TEXT>&amp;2 is an &amp;3 parameter of &amp;1, not an input.</TEXT>
+     <TEXT>&amp;2 of &amp;1 is declared &amp;3, not as an input.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>009</MSGNR>
-     <TEXT>&amp;2 is an &amp;3 parameter of &amp;1, not an output.</TEXT>
+     <TEXT>&amp;2 of &amp;1 is declared &amp;3, not as an output.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -72,7 +72,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>013</MSGNR>
-     <TEXT>This rule for &amp;1 already has an answer.</TEXT>
+     <TEXT>This rule for &amp;1 already answers with &amp;2.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -126,7 +126,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>022</MSGNR>
-     <TEXT>Unexpected call of &amp;1 on a mock.</TEXT>
+     <TEXT>&amp;1 was called, but no expect_call( ) declares it.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -149,8 +149,14 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
+     <MSGNR>026</MSGNR>
+     <TEXT>&amp;1 was called with arguments no expect_call( ) declares.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
      <MSGNR>101</MSGNR>
-     <TEXT>Doubles need a global interface.</TEXT>
+     <TEXT>Pass the name of a global interface, for example 'ZIF_ORDER_REPOSITORY'.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -168,7 +174,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>104</MSGNR>
-     <TEXT>Pick one of the names listed below.</TEXT>
+     <TEXT>Pick one of the available names.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -192,7 +198,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>108</MSGNR>
-     <TEXT>Pass a value of type &amp;3, for example a typed variable.</TEXT>
+     <TEXT>Pass a value of that type, for example a typed variable.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -204,7 +210,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>110</MSGNR>
-     <TEXT>A rule answers with returns( ) and sets( ), or with raises( ).</TEXT>
+     <TEXT>A rule either returns and sets, or raises; for other calls add a rule.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -240,13 +246,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>116</MSGNR>
-     <TEXT>This is probably an ATK limitation - please open an issue.</TEXT>
+     <TEXT>ATK limitation? Open an issue: github.com/greltel/abap-test-kit</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>117</MSGNR>
-     <TEXT>Use zcl_atk=&gt;stub( ) if the code under test needs this collaborator.</TEXT>
+     <TEXT>Use a stub or spy if the code under test needs this collaborator.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -270,7 +276,13 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>121</MSGNR>
-     <TEXT>Check the code under test, or use a stub if the call is fine.</TEXT>
+     <TEXT>Check the code under test, or remove the check if the call is fine.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>123</MSGNR>
+     <TEXT>Adjust with( ) of the expect_call( ), or check the code under test.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -324,7 +336,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>209</MSGNR>
-     <TEXT>table with &amp;1 rows</TEXT>
+     <TEXT>table with &amp;1 row(s)</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -343,6 +355,120 @@
      <ARBGB>ZATK</ARBGB>
      <MSGNR>212</MSGNR>
      <TEXT>data reference</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>213</MSGNR>
+     <TEXT>(not supplied)</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>214</MSGNR>
+     <TEXT>Rules:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>215</MSGNR>
+     <TEXT>Closest rule differs in:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>216</MSGNR>
+     <TEXT>Outputs:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>217</MSGNR>
+     <TEXT>The method has no output parameters; a spy can still check its calls.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>218</MSGNR>
+     <TEXT>Declared exceptions:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>219</MSGNR>
+     <TEXT>The method declares no exceptions.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>220</MSGNR>
+     <TEXT>Current value:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>221</MSGNR>
+     <TEXT>Matching calls:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>222</MSGNR>
+     <TEXT>Expectations:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>223</MSGNR>
+     <TEXT>Closest expectation differs in:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>224</MSGNR>
+     <TEXT>A &amp;1 cannot become a &amp;2.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>225</MSGNR>
+     <TEXT>The value has the type &amp;1.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>226</MSGNR>
+     <TEXT>The parameter would hold &amp;1 instead.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>227</MSGNR>
+     <TEXT>single value</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>228</MSGNR>
+     <TEXT>structure</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>229</MSGNR>
+     <TEXT>table</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>230</MSGNR>
+     <TEXT>reference</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>231</MSGNR>
+     <TEXT>table of &amp;1</TEXT>
     </T100>
    </T100>
   </asx:values>
