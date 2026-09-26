@@ -24,7 +24,7 @@ All notable changes to this repository are listed here. Versions follow
   parameter would hold instead as labeled sentences (`The value has the type:`,
   `Instead, the parameter would hold:`), so long type names are no longer cut at the
   50 characters of a message placeholder.
-- 148 unit tests.
+- 149 unit tests.
 
 ## [1.0.0] - 2026-09-26
 
