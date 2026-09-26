@@ -89,9 +89,10 @@ Listed under `options.skip` in `abap_transpile.json`; all of them run on a real 
   `check_declares` off-stack; the other tests of `raises( )` use `ZCX_ATK` for that reason.
 - `ZCL_ATK LTC_DOUBLED_TYPE->GIVEN_STATIC_METHOD_IGNORED` needs `methods[]-is_class`, which
   the transpiler does not emit either.
-- `ZCL_ATK LTC_SPY->WHEN_UNWANTED_NAMES_CALLER` and `ZCL_ATK LTC_CALL_SITE->WHEN_ASKED_THEN_NAMES_CALLER`
-  read the real call stack through XCO; the stand-in in `xco/` returns no frames. The rest of
-  `ltc_call_site` runs off-stack on recorded stack lines.
+- `ZCL_ATK LTC_SPY->WHEN_UNWANTED_NAMES_CALLER`, `ZCL_ATK LTC_STUB->WHEN_UNMATCHED_NAMES_CALLER` and
+  `ZCL_ATK LTC_CALL_SITE->WHEN_ASKED_THEN_NAMES_CALLER` read the real call stack through XCO; the
+  stand-in in `xco/` returns no frames. The rest of `ltc_call_site` runs off-stack on recorded
+  stack lines.
 - `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_OPTIONAL_LEFT_OUT_FAILS` needs
   `parameters[]-is_optional`. The transpiler emits `is_optional` for every parameter as blank:
   `buildMethods` compares the parameter name in its original case with the upper-case names
