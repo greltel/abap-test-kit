@@ -30,10 +30,11 @@ first.
 | Folder | Package | Content |
 |---|---|---|
 | `src/` | `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
-| `src/test/` | `ZATK_TEST` | Interfaces and an exception used by the unit tests of `ZCL_ATK`, and a class they check is rejected |
+| `src/test/` | `ZATK_TEST` | Interfaces and an exception used by the unit tests of `ZCL_ATK` |
 | `src/demo/` | `ZATK_DEMO` | The order service of the [Before and After](README.md#before-and-after) section, tested once with the classic framework and once with the library |
-| `abaplint-stubs/` | - | Minimal definitions of SAP objects for abaplint; abapGit ignores the folder |
-| `.github/workflows/` | - | The abaplint run on every push and pull request |
+| `abaplint-stubs/` | - | Minimal definitions of SAP objects for abaplint and the transpiler; abapGit ignores the folder |
+| `transpiler/` | - | Off-stack test runner: ATDF stand-in, patched open-abap-core classes, runtime patches (see [transpiler/README.md](transpiler/README.md)) |
+| `.github/workflows/` | - | abaplint and the off-stack unit tests on every push and pull request |
 
 abapGit uses the `PREFIX` folder logic, so the sub-packages are named after the
 folders.
@@ -64,18 +65,24 @@ folders.
   them
 * Every problem is a constant of `ZCX_ATK` with two messages in `ZATK`: what
   went wrong (001-099) and how to fix it (101-199). Labels used inside the
-  details are 201-299. Exceptions of the test double framework are caught and
-  translated, never passed on
+  details are 201-299. `get_text( )` puts the three parts on their own lines
+  (`cl_abap_char_utilities=>newline`), and every detail is one line of the form
+  `Label: facts.` built with `lcl_text=>labeled( )` and `lcl_text=>as_lines( )`.
+  A message uses each placeholder once (abaplint `message_exists` counts them)
+  and is at most 73 characters long. Exceptions of the test double framework
+  are caught and translated, never passed on
 * Every change comes with unit tests, and every new or changed public method
   with a README section and a CHANGELOG entry
 
 # Static checks
 
 [abaplint](https://abaplint.org) runs in ABAP Cloud mode on every push and pull
-request (`.github/workflows/abaplint.yml`). To run it locally:
+request (`.github/workflows/abaplint.yml`), with the version pinned in
+`package-lock.json`. To run it locally:
 
 ```sh
-npx @abaplint/cli@latest abaplint.json
+npm ci
+npm run lint
 ```
 
 abaplint downloads the definitions of the SAP standard objects from
@@ -106,18 +113,28 @@ against the real `CL_ABAP_TESTDOUBLE`. The doubled types come from package
 `ZATK_TEST`; add a method to one of them, or a new fixture object, when a
 test needs a parameter shape that does not exist yet.
 
+| Fixture | Shape it provides |
+|---|---|
+| `ZIF_ATK_TEST_ORDERS` | RETURNING values, a numeric text key, a declared exception |
+| `ZIF_ATK_TEST_AUDIT_LOG` | A command without outputs, the target of spies and mocks |
+| `ZIF_ATK_TEST_SHAPES` | EXPORTING, CHANGING, generic, fixed-length, decimal, table, structure, reference and optional parameters, and a static method |
+| `ZIF_ATK_TEST_ARCHIVE` | An interface that includes `ZIF_ATK_TEST_AUDIT_LOG` as a component |
+| `ZCX_ATK_TEST_NOT_FOUND` | A checked exception a doubled method declares |
+
 | Test class | Covers |
 |---|---|
-| `ltc_doubled_type` | Only interfaces can be doubled; the messages for classes, data types and unknown types |
-| `ltc_value_conversion` | Conversion of rule values to the parameter types, without loss |
-| `ltc_stub` | Rules, matching order, strict stubs |
-| `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic and reference parameters |
-| `ltc_spy` | `was_called( )`, `was_not_called( )` and their messages |
-| `ltc_mock` | `expect_call( )`, `verify( )` and undeclared calls |
+| `ltc_doubled_type` | Only interfaces can be doubled; the messages for classes, data types and unknown types; name normalization, suggestions, static methods, the method names ATDF reports |
+| `ltc_component_interface` | Methods of a component interface, named with or without the prefix, routed and matched |
+| `ltc_value_conversion` | Conversion of rule values to the parameter types, without loss, for inputs, outputs and RETURNING; the reason a value does not fit |
+| `ltc_stub` | Rules, matching order, strict stubs, one answer per rule, exceptions |
+| `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic, structure, table, reference and optional parameters |
+| `ltc_spy` | `was_called( )`, `was_not_called( )` and their messages; a spy answers like a stub |
+| `ltc_mock` | `expect_call( )`, `verify( )`, undeclared and surplus calls, several expectations per method, answers of expectations |
 | `ltc_dummy` | Calls of a dummy |
+| `ltc_call_router` | Nothing escapes from the ATDF answer into the code under test |
 | `ltc_facade` | The entry points of `ZCL_ATK` |
-| `ltc_exception_text` | The three parts of a `ZCX_ATK` text |
-| `ltc_value_formatter` | How values are shown in messages |
+| `ltc_exception_text` | The three parts of a `ZCX_ATK` text, placeholders, the previous exception |
+| `ltc_arguments`, `ltc_name_hint`, `ltc_value_formatter`, `ltc_type_formatter` | How arguments, name suggestions, values and types are shown in messages |
 
 Failures that happen during the act step are reported through a local
 interface, so the tests replace the reporter with `ltd_failure_recorder` and
@@ -125,6 +142,15 @@ check what was reported instead of failing themselves.
 
 The demo in `ZATK_DEMO` is part of the test run too: both of its test classes
 must pass, and the README examples are copied from them.
+
+Not covered by tests, checked by review: the translation of an exception of
+`CL_ABAP_TESTDOUBLE` into `ZCX_ATK` in `lth_atdf_gateway` (`atdf_create_failed`,
+`atdf_route_failed`), because no doubled interface makes the framework fail
+deterministically.
+
+The same tests run off-stack on every push, transpiled to JavaScript; see
+[transpiler/README.md](transpiler/README.md) for what is stubbed or patched
+there and which tests only run on a real system.
 
 # How it works inside
 
@@ -140,12 +166,15 @@ must pass, and the README examples are copied from them.
 3. `when( )`, `with( )` and the other configuration methods only write rules
    into memory, checked against the method with RTTI.
 4. At runtime the framework hands every call to the answer object of the
-   library, which records the call in a journal and answers with the best rule.
+   library, which records the call in a journal (an optional parameter the
+   caller left out is recorded as not supplied) and answers with the best rule:
+   the most `with( )` conditions win, then an expectation that still waits for
+   calls, then the rule written last.
 5. `was_called( )` and `verify( )` read the journal.
 
 | Local class | Role |
 |---|---|
-| `lcl_doubled_type` | RTTI description of the doubled interface and its methods that can be configured |
+| `lcl_doubled_type` | RTTI description of the doubled interface and its methods that can be configured; the methods of component interfaces are described from their own interface, so that `get_method_parameter_type` finds their parameters |
 | `lcl_doubled_method` | Parameters of one method; checks values against them and builds the recording call |
 | `lcl_value_conversion` | Copies a value into another type only when nothing is lost; values of different types are never compared directly, because ABAP cannot catch a conversion error inside a comparison |
 | `lcl_arguments` | Parameter names and values of a rule, a check or a recorded call, and the comparison between them |
@@ -156,7 +185,7 @@ must pass, and the README examples are copied from them.
 | `lcl_call_verification` | A `was_called( )` check |
 | `lcl_double` | The object behind `ZIF_ATK_DUMMY`, `ZIF_ATK_STUB`, `ZIF_ATK_SPY` and `ZIF_ATK_MOCK` |
 | `lcl_unit_failure_reporter` | Reports failures during the act step to ABAP Unit |
-| `lcl_value_formatter`, `lcl_name_hint`, `lcl_text` | Values, name suggestions and texts for the messages |
+| `lcl_value_formatter`, `lcl_type_formatter`, `lcl_name_hint`, `lcl_text` | Values, types (`TY_ORDER_ID (N LENGTH 10)`), name suggestions and texts for the messages |
 | `lth_atdf_gateway` | The only class that calls `CL_ABAP_TESTDOUBLE` |
 | `lth_double_factory` | Wires the classes above for `ZCL_ATK` |
 
@@ -172,10 +201,13 @@ on a system, this is where to look:
 | `when_returns_double_then_same` fails, or `?=` is rejected at activation | A value of static type `REF TO object` (what `instance( )` returns) can be down-cast into a generically typed target | `lcl_value_conversion=>copies_losslessly` |
 | Runtime error `CONVT_NO_NUMBER` in `ZCL_ATK` | A text that is not a number was compared with a number; ABAP cannot catch that inside a comparison | Every comparison of values of different types must go through `lcl_value_conversion=>copies_losslessly` |
 | `when_called_thrice_answers` fails | One catch-all configuration with `times( )` answers every call | `lth_atdf_gateway=>route_method` |
+| `ltc_component_interface` fails | The name of a component method in the list of methods of the composed interface and in the ATDF answer (`ZIF_COMPONENT~METHOD`), and whether `interfaces` lists nested components | `lcl_doubled_type=>add_methods_of`, `add_component_interfaces`, `method_called_by_atdf` |
+| `given_optional_left_out_fails` fails | `is_importing_param_supplied( )` reports an optional parameter the caller left out | `lcl_doubled_method=>is_supplied` |
 | Every stub returns initial values, or `internal_error` is reported | The method name the framework passes to the answer, with or without interface prefix | `lcl_doubled_type=>method_called_by_atdf` |
 | `given_generic_table_then_works` or `given_generic_input_then_works` fails | The recording call can fill generically typed parameters | `lcl_doubled_method=>concrete_type_for` |
 | `when_raises_then_caller_gets` fails | `IF_ABAP_TESTDOUBLE_RESULT->raise_exception( )` records the exception and the framework raises it after the answer | `lcl_call_rule=>answer` |
 | A failure during the act step does not show up | `CL_ABAP_UNIT_ASSERT=>fail( quit = no )` inside the answer object | `lcl_unit_failure_reporter` |
+| The three parts of a message run into one line, or a `#` shows between them | The ABAP Unit view of the tool in use does not render `cl_abap_char_utilities=>newline` inside a failure text | `zcx_atk=>line_break` |
 | abapGit: *ABAP Language Version of linked package is not compatible with repository settings*, or an object *has ABAP language version … but repository is set to …* | The packages were created with *Standard ABAP*, for example by abapGit itself | Set *ABAP for Cloud Development* on `ZATK`, `ZATK_TEST` and `ZATK_DEMO` in ADT and pull again |
 
 # Releasing
@@ -190,14 +222,16 @@ the whole repository. The public API is `ZCL_ATK`, the `ZIF_ATK_*` interfaces,
 | A method, double, matcher or message is added; behavior changes compatibly | MINOR |
 | A bug is fixed, a message is reworded, documentation or tests change | PATCH |
 
-Before `1.0.0` the public API can still change in a MINOR release; such changes
-are listed under **Changed** in the CHANGELOG.
+From `1.0.0` on, an incompatible change to the public API is a MAJOR release.
 
 To make a release:
 
-1. Make sure abaplint and all unit tests pass on `main`.
+1. Make sure abaplint and the off-stack unit tests are green on `main`
+   (both workflows), and run the unit tests of `ZATK` and its sub-packages on
+   a real system: every test must pass, including the ones the transpiler
+   skips (`transpiler/README.md`, *Skipped tests*).
 2. In [CHANGELOG.md](CHANGELOG.md), rename **Unreleased** to the new version
-   and date (`## [0.2.0] - 2026-10-15`) and start a new, empty **Unreleased**
-   section above it.
+   and date (`## [1.0.0] - 2026-10-15`) and start a new, empty **Unreleased**
+   section above it. Set the same version in `package.json`.
 3. Commit, then tag the commit `vMAJOR.MINOR.PATCH` and push the tag.
 4. Create a GitHub release from the tag with the CHANGELOG section as text.
