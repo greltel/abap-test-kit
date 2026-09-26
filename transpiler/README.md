@@ -27,6 +27,7 @@ CI: `.github/workflows/unit.yml`. Everything here is tooling; abapGit never impo
 | `setup.mjs` | Runtime patches applied before (`setup`) and after (`afterLoad`) the ABAP objects load |
 | `atdf/cl_abap_testdouble.clas.abap` | CL_ABAP_TESTDOUBLE for the transpiler; delegates to `atdf/atdf_runtime.mjs` |
 | `atdf/atdf_runtime.mjs` | JavaScript stand-in for the ABAP Test Double Framework |
+| `xco/` | Stand-ins for the XCO classes ATK reads the call stack with (`xco_cp`, `xco_cp_call_stack` and what their chain returns); open-abap-core has no XCO. Off-stack the stack has no lines, so a call has no origin |
 | `open-abap-patches/` | Patched copies of open-abap-core classes (the originals are excluded in `abap_transpile.json`) |
 
 The `IF_ABAP_TESTDOUBLE_*` interfaces and `CX_ATD_EXCEPTION_CORE` come from `/abaplint-stubs/`,
@@ -88,6 +89,9 @@ Listed under `options.skip` in `abap_transpile.json`; all of them run on a real 
   `check_declares` off-stack; the other tests of `raises( )` use `ZCX_ATK` for that reason.
 - `ZCL_ATK LTC_DOUBLED_TYPE->GIVEN_STATIC_METHOD_IGNORED` needs `methods[]-is_class`, which
   the transpiler does not emit either.
+- `ZCL_ATK LTC_SPY->WHEN_UNWANTED_NAMES_CALLER` and `ZCL_ATK LTC_CALL_SITE->WHEN_ASKED_THEN_NAMES_CALLER`
+  read the real call stack through XCO; the stand-in in `xco/` returns no frames. The rest of
+  `ltc_call_site` runs off-stack on recorded stack lines.
 - `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_OPTIONAL_LEFT_OUT_FAILS` needs
   `parameters[]-is_optional`. The transpiler emits `is_optional` for every parameter as blank:
   `buildMethods` compares the parameter name in its original case with the upper-case names
