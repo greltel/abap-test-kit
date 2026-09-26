@@ -307,7 +307,7 @@ class AtdfConfiguration {
     this.ignoreAll = false;
     this.ignored = new Set();
     this.expectedCalls = undefined; // set by and_expect( )
-    this.methodName = undefined;    // set by the registration call
+    this.methodName = undefined;    // INTERFACE~METHOD, set by the registration call
     this.registeredArguments = {};  // importing arguments of the registration call
     this.calls = 0;
   }
@@ -428,16 +428,17 @@ class AtdfVerification {
 async function dispatch(double, interfaceName, methodName, meta, INPUT) {
   const state = doubles.get(double);
   const parameters = meta.parameters ?? {};
+  const qualifiedName = interfaceName + "~" + methodName;
   if (pendingConfiguration !== undefined && pendingConfiguration.double === double) {
     // ATDF two-step: this call only registers the configuration
-    pendingConfiguration.register(methodName, parameters, INPUT);
+    pendingConfiguration.register(qualifiedName, parameters, INPUT);
     state.configurations.push(pendingConfiguration);
     pendingConfiguration = undefined;
     return undefined;
   }
 
   const configuration = state.configurations.findLast(c =>
-    c.methodName === methodName && c.calls < c.times && c.matches(parameters, INPUT));
+    c.methodName === qualifiedName && c.calls < c.times && c.matches(parameters, INPUT));
   if (configuration === undefined) {
     return initialReturnValue(parameters);
   }
@@ -449,8 +450,7 @@ async function dispatch(double, interfaceName, methodName, meta, INPUT) {
     await configuration.answer.if_abap_testdouble_answer$answer({
       arguments: wrap(args, "IF_ABAP_TESTDOUBLE_ARGUMENTS"),
       double_handle: wrap(state.handle, "IF_ABAP_TESTDOUBLE_HANDLE"),
-      method_name: new abap.types.Character(61, {qualifiedName: "abap_methname"})
-        .set(interfaceName + "~" + methodName),
+      method_name: new abap.types.Character(61, {qualifiedName: "abap_methname"}).set(qualifiedName),
       result: wrap(result, "IF_ABAP_TESTDOUBLE_RESULT"),
     });
     if (result.exception !== undefined) {
@@ -473,18 +473,39 @@ async function dispatch(double, interfaceName, methodName, meta, INPUT) {
 
 const doubleClasses = new Map();
 
+/**
+ * The interface and every interface it includes (transitively), each with its methods. The
+ * transpiler emits the component interfaces only when setup.mjs added IMPLEMENTED_INTERFACES.
+ */
+function interfaceFamily(interfaceName, interfaceClass) {
+  const family = [];
+  const seen = new Set();
+  const visit = (name, definition) => {
+    if (seen.has(name) || definition === undefined) {
+      return;
+    }
+    seen.add(name);
+    family.push({name, methods: definition.METHODS ?? {}});
+    for (const component of definition.IMPLEMENTED_INTERFACES ?? []) {
+      visit(component, abap.Classes[component]);
+    }
+  };
+  visit(interfaceName, interfaceClass);
+  return family;
+}
+
 function doubleClassFor(interfaceName, interfaceClass) {
   let doubleClass = doubleClasses.get(interfaceName);
   if (doubleClass !== undefined) {
     return doubleClass;
   }
-  const methods = interfaceClass.METHODS ?? {};
+  const family = interfaceFamily(interfaceName, interfaceClass);
   doubleClass = class {
     static INTERNAL_TYPE = "CLAS";
     static INTERNAL_NAME = "ATDF_DOUBLE_" + interfaceName;
-    static IMPLEMENTED_INTERFACES = [interfaceName];
+    static IMPLEMENTED_INTERFACES = family.map(member => member.name);
     static ATTRIBUTES = {};
-    static METHODS = methods;
+    static METHODS = interfaceClass.METHODS ?? {};
 
     constructor() {
       this.INTERNAL_ID = abap.internalIdCounter++;
@@ -495,11 +516,15 @@ function doubleClassFor(interfaceName, interfaceClass) {
     }
   };
   Object.defineProperty(doubleClass, "name", {value: "ATDF_DOUBLE_" + interfaceName});
-  const prefix = interfaceName.toLowerCase() + "$";
-  for (const [methodName, meta] of Object.entries(methods)) {
-    doubleClass.prototype[prefix + methodName.toLowerCase()] = async function (INPUT) {
-      return dispatch(this, interfaceName, methodName, meta, INPUT);
-    };
+  // a method of a component interface is called as component$method and reported to the
+  // answer as COMPONENT~METHOD, the name it has in the class ATDF generates
+  for (const member of family) {
+    const prefix = member.name.toLowerCase() + "$";
+    for (const [methodName, meta] of Object.entries(member.methods)) {
+      doubleClass.prototype[prefix + methodName.toLowerCase()] = async function (INPUT) {
+        return dispatch(this, member.name, methodName, meta, INPUT);
+      };
+    }
   }
   doubleClasses.set(interfaceName, doubleClass);
   return doubleClass;
@@ -550,7 +575,7 @@ export async function verifyExpectations(doubleReference) {
     if (configuration.expectedCalls === undefined || configuration.calls === configuration.expectedCalls) {
       continue;
     }
-    const message = `${state.interfaceName}~${configuration.methodName}: expected `
+    const message = `${configuration.methodName}: expected `
       + `${configuration.expectedCalls} call(s), got ${configuration.calls}`;
     await abap.Classes["CL_ABAP_UNIT_ASSERT"].fail({msg: new abap.types.String().set(message)});
   }
