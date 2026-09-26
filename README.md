@@ -231,7 +231,8 @@ A stub that also records every call. The test checks the calls after the act
 step with `was_called( )`, narrows the check with `with( )` and closes it with
 `times( )`, which performs the check - `times( 0 )` and `was_not_called( )`
 both check that no matching call happened. A failed check shows the expected
-arguments, the closest actual call and the parameters that differ.
+arguments, the closest actual call with the method and line it came from, and the
+parameters that differ.
 
 | Interface | Purpose |
 |---|---|
@@ -255,7 +256,7 @@ audit_log->was_not_called( 'DELETE' ).
 WRITE: expected 1 matching call(s), but found 0.
 Check the code under test, or adjust with( ) and times( ).
 Expected arguments: ORDER_ID = '0000004711', ACTION = 'CANCELLED'.
-Closest actual call: ORDER_ID = '0000004711', ACTION = 'CANCELED'.
+Closest actual call: ORDER_ID = '0000004711', ACTION = 'CANCELED' from ZCL_ORDER_SERVICE=>ZIF_ORDER_SERVICE~CANCEL, line 6 of the method.
 Differs in: ACTION.
 ```
 
@@ -287,12 +288,16 @@ audit_log->verify( ).
 
 Every mistake in a test surfaces through `ZCX_ATK`. Its text has the same three parts every
 time, in this order: what went wrong, how to fix it, and the facts - the arguments of the
-call, the rules that exist, the closest one and where it differs, or what a value would
-become. The examples below are broken into lines here; ABAP Unit shows them as one line. Close misspellings of method and parameter names get a suggestion; names that are
+call and the method and line of the code under test that made it, the rules that exist,
+the closest one and where it differs, or what a value would become. In the ABAP Unit result, the first part is the message of the failure; the fix and
+the facts are its detail, shown under it (Analysis in the SAP GUI, Details in ADT). The
+examples below show the parts on separate lines. Close misspellings of method and parameter names get a suggestion; names that are
 far from every candidate get the list of candidates with their kinds. The texts live in
 message class `ZATK`; exceptions of the test double framework never reach the test
 untranslated. Failures during the act step are recorded without stopping the code under
-test, so a `CATCH cx_root` in the code under test cannot hide them.
+test, so a `CATCH cx_root` in the code under test cannot hide them; the facts of such a
+failure name the method and the line that called the double (read from the XCO call
+stack, with the line counted from the `METHOD` statement).
 
 ```text
 ZCL_ORDER_SERVICE is a class, and ATK doubles interfaces only.
@@ -308,7 +313,7 @@ Available: ORDER_ID (IMPORTING), RESULT (RETURNING).
 ```text
 Value '12.345' does not fit parameter AMOUNT of type TY_AMOUNT (P LENGTH 8 DECIMALS 2).
 Pass a value of that type, for example a typed variable.
-The parameter would hold 12.35 instead.
+Instead, the parameter would hold: 12.35.
 ```
 
 ```text
@@ -467,9 +472,15 @@ fails the test at the call:
 GET_ORDER was called with arguments that match none of its rules.
 Add a rule for these arguments, or check the code under test.
 Actual arguments: ORDER_ID = '0000000815'.
+Called from: ZCL_ATK_DEMO_ORDER_SERVICE=>ZIF_ATK_DEMO_ORDER_SERVICE~CANCEL, line 2 of the method.
 Rules: (ORDER_ID = '0000004711').
 Closest rule differs in: ORDER_ID.
 ```
+
+The failure list of ABAP Unit shows the first line; the rest is the detail of the failure
+(Analysis in the SAP GUI, Details in ADT). The classic framework fails in the same place -
+at the call - only when an expectation is configured for it; the line it shows is the one
+of the framework, and the method of the code under test is somewhere in the stack trace.
 
 ## Summary
 
@@ -488,6 +499,7 @@ framework used directly:
 | A call without a matching configuration returns initial values silently | A call that matches no rule of a configured method fails the test at the call, with the arguments |
 | A wrong value in a configuration fails the test somewhere later, or not at all | Values are checked against the parameter type when the rule is written; the message says what the parameter would hold instead |
 | A failed expectation says how many calls were made, not which | The failure shows the expected arguments, the closest call and the parameter that differs |
+| Which line of the code under test made the unwanted or unmatched call is in the stack trace, if the failure happens at the call at all | Every recorded call carries the method and line of the code under test that made it: `from ZCL_ORDER_SERVICE=>ZIF_ORDER_SERVICE~CANCEL, line 6 of the method` |
 | Framework exceptions (`CX_ATD_EXCEPTION`) with technical texts | One exception class whose text says what went wrong and how to fix it, with a suggestion for misspelled names |
 
 One difference to keep in mind: method and parameter names are strings. The
@@ -525,7 +537,7 @@ refactoring in ADT does not update them.
 * Test code only — `ZCL_ATK` is `FOR TESTING`, so production code cannot depend on it
 * Clean Code following the [Clean ABAP Style Guides](https://github.com/SAP/styleguides/blob/main/clean-abap/CleanABAP.md)
 * Modern ABAP syntax (7.58 / 9.14) — expressions, inline declarations, string templates
-* 133 unit tests of the library run with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, and off-stack on every push with the abaplint transpiler; abaplint on every push
+* 148 unit tests of the library run with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, and off-stack on every push with the abaplint transpiler; abaplint on every push
 * Documented with ABAP Doc on every public declaration
 
 # To-Do
