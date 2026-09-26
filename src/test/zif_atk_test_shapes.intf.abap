@@ -62,4 +62,23 @@ INTERFACE zif_atk_test_shapes PUBLIC.
   METHODS new_log
     RETURNING VALUE(result) TYPE REF TO zif_atk_test_audit_log.
 
+  "! An optional input, to test calls that leave it out.
+  "! @parameter salutation | Greeting word
+  "! @parameter name       | Who is greeted
+  "! @parameter result     | The greeting
+  METHODS greet
+    IMPORTING salutation    TYPE string OPTIONAL
+              name          TYPE string
+    RETURNING VALUE(result) TYPE string.
+
+  "! A structured input, to test conditions on structures.
+  "! @parameter order | Order to save
+  METHODS save
+    IMPORTING order TYPE zif_atk_test_orders=>ty_order.
+
+  "! A static method, which no double can take over.
+  "! @parameter result | Version of the fixture
+  CLASS-METHODS version
+    RETURNING VALUE(result) TYPE string.
+
 ENDINTERFACE.

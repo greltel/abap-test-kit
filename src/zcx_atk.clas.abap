@@ -1,7 +1,8 @@
 "! <p class="shorttext synchronized" lang="EN">ABAP Test Kit: test double misuse or failed check</p>
 "! Raised when a test double cannot be created or configured as written. Its text always says
-"! what went wrong and how to fix it. Tests of ATK itself compare {@link zcx_atk.DATA:problem} with the
-"! constants of this class to check which problem occurred.
+"! what went wrong, how to fix it and, on further lines, the facts involved: arguments, rules,
+"! the closest call. Tests of ATK itself compare {@link zcx_atk.DATA:problem} with the constants
+"! of this class to check which problem occurred.
 CLASS zcx_atk DEFINITION
   PUBLIC
   INHERITING FROM cx_no_check
@@ -70,13 +71,13 @@ CLASS zcx_atk DEFINITION
         fix  TYPE symsgno VALUE '104',
       END OF unknown_parameter.
     CONSTANTS:
-      "! &2 is an &3 parameter of &1, not an input
+      "! &2 of &1 is declared &3, not as an input
       BEGIN OF not_an_input,
         what TYPE symsgno VALUE '008',
         fix  TYPE symsgno VALUE '105',
       END OF not_an_input.
     CONSTANTS:
-      "! &2 is an &3 parameter of &1, not an output
+      "! &2 of &1 is declared &3, not as an output
       BEGIN OF not_an_output,
         what TYPE symsgno VALUE '009',
         fix  TYPE symsgno VALUE '106',
@@ -88,25 +89,25 @@ CLASS zcx_atk DEFINITION
         fix  TYPE symsgno VALUE '107',
       END OF no_returning_parameter.
     CONSTANTS:
-      "! Value &1 does not fit parameter &2 of type &3
+      "! Value &1 does not fit parameter &2 of type &3; the details say why
       BEGIN OF value_does_not_fit,
         what TYPE symsgno VALUE '011',
         fix  TYPE symsgno VALUE '108',
       END OF value_does_not_fit.
     CONSTANTS:
-      "! &1 does not declare &2 in its RAISING clause
+      "! &1 does not declare &2 in its RAISING clause; the details list the declared ones
       BEGIN OF undeclared_exception,
         what TYPE symsgno VALUE '012',
         fix  TYPE symsgno VALUE '109',
       END OF undeclared_exception.
     CONSTANTS:
-      "! This rule for &1 already has an answer
+      "! This rule for &1 already answers with &2
       BEGIN OF answer_already_set,
         what TYPE symsgno VALUE '013',
         fix  TYPE symsgno VALUE '110',
       END OF answer_already_set.
     CONSTANTS:
-      "! Parameter &2 of &1 already has a value in this rule or check
+      "! Parameter &2 of &1 already has a value in this rule or check; the details show it
       BEGIN OF value_given_twice,
         what TYPE symsgno VALUE '014',
         fix  TYPE symsgno VALUE '111',
@@ -148,17 +149,23 @@ CLASS zcx_atk DEFINITION
         fix  TYPE symsgno VALUE '117',
       END OF dummy_called.
     CONSTANTS:
-      "! &1 was called with arguments that match none of its rules
+      "! &1 was called with arguments that match none of its rules; the details show them
       BEGIN OF no_matching_rule,
         what TYPE symsgno VALUE '021',
         fix  TYPE symsgno VALUE '118',
       END OF no_matching_rule.
     CONSTANTS:
-      "! Unexpected call of &1 on a mock
+      "! &1 was called, but no expect_call( ) declares it
       BEGIN OF unexpected_call,
         what TYPE symsgno VALUE '022',
         fix  TYPE symsgno VALUE '119',
       END OF unexpected_call.
+    CONSTANTS:
+      "! &1 was called with arguments no expect_call( ) declares; the details show them
+      BEGIN OF no_matching_expectation,
+        what TYPE symsgno VALUE '026',
+        fix  TYPE symsgno VALUE '123',
+      END OF no_matching_expectation.
     CONSTANTS:
       "! &1: expected &2 matching call(s), but found &3
       BEGIN OF wrong_call_count,
@@ -180,7 +187,7 @@ CLASS zcx_atk DEFINITION
 
     "! Which problem occurred; one of the constants of this class
     DATA problem TYPE ty_problem READ-ONLY.
-    "! Context appended to the text, for example the arguments of the calls involved
+    "! Facts appended to the text on their own lines, for example the arguments of the calls involved
     DATA details TYPE string READ-ONLY.
 
     "! Creates the exception for one of the problems defined as constants of this class.
@@ -192,12 +199,14 @@ CLASS zcx_atk DEFINITION
                 context  TYPE ty_context      OPTIONAL
                 previous TYPE REF TO cx_root OPTIONAL.
 
-    " the text is what went wrong, how to fix it, and the details, in this order
+    " the text is what went wrong, how to fix it, and the details, one line each
     METHODS if_message~get_text REDEFINITION.
 
   PRIVATE SECTION.
     CONSTANTS message_class TYPE symsgid VALUE 'ZATK'.
     CONSTANTS error_message TYPE symsgty VALUE 'E'.
+    "! Separates what went wrong, the fix and each detail; ADT shows the lines as written
+    CONSTANTS line_break TYPE abap_char1 VALUE cl_abap_char_utilities=>newline.
 
     CONSTANTS: BEGIN OF placeholder,
                  first  TYPE scx_attrname VALUE 'IF_T100_DYN_MSG~MSGV1',
@@ -230,9 +239,9 @@ CLASS zcx_atk IMPLEMENTATION.
 
 
   METHOD if_message~get_text.
-    result = |{ super->if_message~get_text( ) } { fix_text( ) }|.
+    result = |{ super->if_message~get_text( ) }{ line_break }{ fix_text( ) }|.
     IF details IS NOT INITIAL.
-      result = |{ result } { details }|.
+      result = |{ result }{ line_break }{ details }|.
     ENDIF.
   ENDMETHOD.
 

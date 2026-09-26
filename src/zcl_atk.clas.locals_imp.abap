@@ -52,6 +52,44 @@ CLASS lcl_text DEFINITION FINAL CREATE PRIVATE.
     CLASS-METHODS join
       IMPORTING texts         TYPE ty_texts
       RETURNING VALUE(result) TYPE string.
+
+    "! Puts each text on its own line, for the details of a failure.
+    CLASS-METHODS as_lines
+      IMPORTING texts         TYPE ty_texts
+      RETURNING VALUE(result) TYPE string.
+
+    "! "Label: a, b." - one line of the details of a failure.
+    CLASS-METHODS labeled
+      IMPORTING label         TYPE string
+                text          TYPE string
+      RETURNING VALUE(result) TYPE string.
+ENDCLASS.
+
+
+"! Readable type descriptions for messages: TY_ORDER_ID (N LENGTH 10), REF TO ZIF_LOG, table of STRING.
+CLASS lcl_type_formatter DEFINITION FINAL CREATE PRIVATE.
+  PUBLIC SECTION.
+    CLASS-METHODS describe
+      IMPORTING type          TYPE REF TO cl_abap_typedescr
+      RETURNING VALUE(result) TYPE string.
+
+    "! What kind of value the type holds, in words: single value, structure, table, reference.
+    CLASS-METHODS kind_word
+      IMPORTING type          TYPE REF TO cl_abap_typedescr
+      RETURNING VALUE(result) TYPE string.
+
+  PRIVATE SECTION.
+    CLASS-METHODS technical_name
+      IMPORTING type          TYPE REF TO cl_abap_typedescr
+      RETURNING VALUE(result) TYPE string.
+
+    CLASS-METHODS elementary_name
+      IMPORTING type          TYPE REF TO cl_abap_typedescr
+      RETURNING VALUE(result) TYPE string.
+
+    CLASS-METHODS referenced_name
+      IMPORTING type          TYPE REF TO cl_abap_refdescr
+      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 
@@ -117,7 +155,30 @@ CLASS lcl_value_conversion DEFINITION FINAL CREATE PRIVATE.
                 target        TYPE REF TO data
       RETURNING VALUE(result) TYPE abap_bool.
 
+    "! Why the source does not fit the target: the kinds differ, the type differs, the
+    "! conversion fails, or the target would hold a different value.
+    CLASS-METHODS explain_misfit
+      IMPORTING source        TYPE any
+                target        TYPE REF TO data
+      RETURNING VALUE(result) TYPE string.
+
   PRIVATE SECTION.
+    CLASS-METHODS copy
+      IMPORTING source TYPE any
+                target TYPE REF TO data
+      RAISING   cx_sy_conversion_error
+                cx_sy_move_cast_error
+                cx_sy_itab_error.
+
+    CLASS-METHODS explain_kind_mismatch
+      IMPORTING source        TYPE any
+                target_type   TYPE REF TO cl_abap_datadescr
+      RETURNING VALUE(result) TYPE string.
+
+    CLASS-METHODS explain_copy
+      IMPORTING source        TYPE any
+                target        TYPE REF TO data
+      RETURNING VALUE(result) TYPE string.
     CLASS-METHODS fits_structurally
       IMPORTING source        TYPE any
                 target_type   TYPE REF TO cl_abap_datadescr
@@ -151,14 +212,18 @@ CLASS lcl_arguments DEFINITION FINAL.
   PUBLIC SECTION.
     TYPES:
       BEGIN OF ty_argument,
-        name  TYPE abap_parmname,
-        value TYPE REF TO data,
+        name        TYPE abap_parmname,
+        value       TYPE REF TO data,
+        "! abap_false for an optional parameter the caller left out; its value is then initial
+        is_supplied TYPE abap_bool,
       END OF ty_argument.
-    TYPES ty_arguments TYPE SORTED TABLE OF ty_argument WITH UNIQUE KEY name.
+    "! In the order the values were put, which is the order of the parameters of the method
+    TYPES ty_arguments TYPE STANDARD TABLE OF ty_argument WITH EMPTY KEY.
 
     METHODS put
-      IMPORTING name  TYPE abap_parmname
-                value TYPE REF TO data.
+      IMPORTING name        TYPE abap_parmname
+                value       TYPE REF TO data
+                is_supplied TYPE abap_bool DEFAULT abap_true.
 
     METHODS has
       IMPORTING name          TYPE abap_parmname
@@ -210,7 +275,8 @@ CLASS lcl_doubled_method DEFINITION FINAL.
         is_optional TYPE abap_bool,
         data_type   TYPE REF TO cl_abap_datadescr,
       END OF ty_parameter.
-    TYPES ty_parameters TYPE SORTED TABLE OF ty_parameter WITH UNIQUE KEY name.
+    "! In the order of the declaration, so that lists in messages read like the signature
+    TYPES ty_parameters TYPE STANDARD TABLE OF ty_parameter WITH EMPTY KEY.
 
     TYPES:
       BEGIN OF ty_naming,
@@ -259,7 +325,8 @@ CLASS lcl_doubled_method DEFINITION FINAL.
     METHODS recording_arguments
       RETURNING VALUE(result) TYPE abap_parmbind_tab.
 
-    "! Copies of the input arguments of a call the ATDF double received.
+    "! Copies of the input arguments of a call the ATDF double received. An optional parameter
+    "! the caller left out is recorded as not supplied, with an initial value.
     METHODS read_arguments
       IMPORTING atdf_arguments TYPE REF TO if_abap_testdouble_arguments
       RETURNING VALUE(result)  TYPE REF TO lcl_arguments.
@@ -289,6 +356,17 @@ CLASS lcl_doubled_method DEFINITION FINAL.
     METHODS raise_unknown_parameter
       IMPORTING parameter_name TYPE string.
 
+    "! "ORDER_ID (IMPORTING), RESULT (RETURNING)" - the parameters with their kinds
+    METHODS parameter_names
+      RETURNING VALUE(result) TYPE ty_texts.
+
+    "! "Outputs: A, B." or the hint that the method has none, for returns( ) on the wrong method
+    METHODS describe_outputs
+      RETURNING VALUE(result) TYPE string.
+
+    METHODS describe_declared_exceptions
+      RETURNING VALUE(result) TYPE string.
+
     METHODS add_argument
       IMPORTING arguments TYPE REF TO lcl_arguments
                 parameter TYPE ty_parameter
@@ -302,7 +380,14 @@ CLASS lcl_doubled_method DEFINITION FINAL.
     METHODS read_argument
       IMPORTING atdf_arguments TYPE REF TO if_abap_testdouble_arguments
                 parameter      TYPE ty_parameter
-      RETURNING VALUE(result)  TYPE REF TO data.
+      RETURNING VALUE(result)  TYPE lcl_arguments=>ty_argument.
+
+    "! Whether the caller passed the parameter; a mandatory parameter is always supplied.
+    METHODS is_supplied
+      IMPORTING atdf_arguments TYPE REF TO if_abap_testdouble_arguments
+                parameter      TYPE ty_parameter
+      RETURNING VALUE(result)  TYPE abap_bool
+      RAISING   cx_static_check.
 
     CLASS-METHODS parameter_type
       IMPORTING owner          TYPE REF TO cl_abap_objectdescr
@@ -433,8 +518,9 @@ CLASS lcl_call_journal DEFINITION FINAL.
                 filter         TYPE REF TO lcl_arguments
       RETURNING VALUE(result)  TYPE i.
 
-    "! Expected arguments, the closest actual call and where it differs.
-    METHODS explain_mismatch
+    "! Why the number of matching calls is not the expected one: the expected arguments, then
+    "! the matching calls, or the closest call and where it differs, or that no call was recorded.
+    METHODS explain_count
       IMPORTING doubled_method TYPE REF TO lcl_doubled_method
                 filter         TYPE REF TO lcl_arguments
       RETURNING VALUE(result)  TYPE string.
@@ -450,6 +536,16 @@ CLASS lcl_call_journal DEFINITION FINAL.
       IMPORTING doubled_method TYPE REF TO lcl_doubled_method
                 filter         TYPE REF TO lcl_arguments
       RETURNING VALUE(result)  TYPE REF TO lcl_arguments.
+
+    METHODS describe_matching_calls
+      IMPORTING doubled_method TYPE REF TO lcl_doubled_method
+                filter         TYPE REF TO lcl_arguments
+      RETURNING VALUE(result)  TYPE string.
+
+    METHODS describe_closest_call
+      IMPORTING doubled_method TYPE REF TO lcl_doubled_method
+                filter         TYPE REF TO lcl_arguments
+      RETURNING VALUE(result)  TYPE string.
 ENDCLASS.
 
 
@@ -459,9 +555,11 @@ CLASS lcl_call_rule DEFINITION FINAL.
     INTERFACES zif_atk_call_rule.
     INTERFACES zif_atk_call_expectation.
 
+    "! @parameter is_expectation | abap_true for expect_call( ): the rule counts its calls
     METHODS constructor
       IMPORTING doubled_method TYPE REF TO lcl_doubled_method
-                sequence       TYPE i.
+                sequence       TYPE i
+                is_expectation TYPE abap_bool.
 
     METHODS is_for
       IMPORTING doubled_method TYPE REF TO lcl_doubled_method
@@ -471,10 +569,25 @@ CLASS lcl_call_rule DEFINITION FINAL.
       IMPORTING arguments     TYPE REF TO lcl_arguments
       RETURNING VALUE(result) TYPE abap_bool.
 
-    "! More with( ) conditions win; on a tie the rule written later wins.
+    "! More with( ) conditions win. On a tie an expectation that still waits for calls wins
+    "! over one that got all its calls, so two identical expect_call( ) expect two calls;
+    "! on a full tie the rule written later wins.
     METHODS outranks
       IMPORTING other         TYPE REF TO lcl_call_rule
       RETURNING VALUE(result) TYPE abap_bool.
+
+    "! A rule of a stub or spy is always open; an expectation until it got all its calls.
+    METHODS is_open
+      RETURNING VALUE(result) TYPE abap_bool.
+
+    "! "(ORDER_ID = '0000004711')" - the with( ) conditions, for lists of rules in messages
+    METHODS describe_conditions
+      RETURNING VALUE(result) TYPE string.
+
+    "! Names of the with( ) conditions these arguments do not meet
+    METHODS unmet_conditions
+      IMPORTING arguments     TYPE REF TO lcl_arguments
+      RETURNING VALUE(result) TYPE ty_texts.
 
     METHODS answer
       IMPORTING atdf_result TYPE REF TO if_abap_testdouble_result.
@@ -489,6 +602,7 @@ CLASS lcl_call_rule DEFINITION FINAL.
   PRIVATE SECTION.
     DATA doubled_method TYPE REF TO lcl_doubled_method.
     DATA rule_sequence TYPE i.
+    DATA counts_calls TYPE abap_bool.
     DATA conditions TYPE REF TO lcl_arguments.
     DATA outputs TYPE REF TO lcl_arguments.
     DATA returning_value TYPE REF TO data.
@@ -512,7 +626,9 @@ CLASS lcl_call_rule DEFINITION FINAL.
 
     METHODS ensure_no_exception.
 
-    METHODS raise_answer_already_set.
+    "! @parameter answer | The answer the rule already has: returns( ), sets( ) or raises( )
+    METHODS raise_answer_already_set
+      IMPORTING answer TYPE string.
 
     METHODS write_outputs
       IMPORTING atdf_result TYPE REF TO if_abap_testdouble_result
@@ -525,8 +641,10 @@ CLASS lcl_rulebook DEFINITION FINAL.
   PUBLIC SECTION.
     TYPES ty_rules TYPE STANDARD TABLE OF REF TO lcl_call_rule WITH EMPTY KEY.
 
+    "! @parameter is_expectation | abap_true for a mock: the rule counts its calls
     METHODS new_rule
       IMPORTING doubled_method TYPE REF TO lcl_doubled_method
+                is_expectation TYPE abap_bool DEFAULT abap_false
       RETURNING VALUE(result)  TYPE REF TO lcl_call_rule.
 
     METHODS best_rule
@@ -541,8 +659,23 @@ CLASS lcl_rulebook DEFINITION FINAL.
     METHODS rules
       RETURNING VALUE(result) TYPE ty_rules.
 
+    "! The rules of the method and where the closest one differs from the arguments, for
+    "! the failure of a call no rule matches.
+    "! @parameter list_label    | "Rules:" or "Expectations:"
+    "! @parameter closest_label | "Closest rule differs in:" or its expectation counterpart
+    METHODS explain_no_match
+      IMPORTING doubled_method TYPE REF TO lcl_doubled_method
+                arguments      TYPE REF TO lcl_arguments
+                list_label     TYPE string
+                closest_label  TYPE string
+      RETURNING VALUE(result)  TYPE string.
+
   PRIVATE SECTION.
     DATA all_rules TYPE ty_rules.
+
+    METHODS rules_for
+      IMPORTING doubled_method TYPE REF TO lcl_doubled_method
+      RETURNING VALUE(result)  TYPE ty_rules.
 ENDCLASS.
 
 
@@ -601,7 +734,14 @@ CLASS lcl_call_router DEFINITION FINAL.
       IMPORTING problem        TYPE zcx_atk=>ty_problem
                 doubled_method TYPE REF TO lcl_doubled_method
                 arguments      TYPE REF TO lcl_arguments
+                explanation    TYPE string OPTIONAL
       RETURNING VALUE(result)  TYPE REF TO zcx_atk.
+
+    "! The rules or expectations of the method and where the closest one differs
+    METHODS explain_no_match
+      IMPORTING doubled_method TYPE REF TO lcl_doubled_method
+                arguments      TYPE REF TO lcl_arguments
+      RETURNING VALUE(result)  TYPE string.
 ENDCLASS.
 
 
@@ -678,6 +818,99 @@ CLASS lcl_text IMPLEMENTATION.
   METHOD join.
     result = concat_lines_of( table = texts
                               sep   = `, ` ).
+  ENDMETHOD.
+
+
+  METHOD as_lines.
+    result = concat_lines_of( table = texts
+                              sep   = cl_abap_char_utilities=>newline ).
+  ENDMETHOD.
+
+
+  METHOD labeled.
+    result = |{ label } { text }.|.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lcl_type_formatter IMPLEMENTATION.
+
+  METHOD describe.
+    IF type IS NOT BOUND.
+      RETURN.
+    ENDIF.
+    DATA(name) = type->get_relative_name( ).
+    DATA(technical) = technical_name( type ).
+    DATA(is_reference) = xsdbool( type->kind = cl_abap_typedescr=>kind_ref ).
+    result = COND #( WHEN name IS INITIAL OR name = technical OR is_reference = abap_true
+                     THEN technical
+                     ELSE |{ name } ({ technical })| ).
+  ENDMETHOD.
+
+
+  METHOD kind_word.
+    CASE type->kind.
+      WHEN cl_abap_typedescr=>kind_struct.
+        MESSAGE e228(zatk) INTO result.
+      WHEN cl_abap_typedescr=>kind_table.
+        MESSAGE e229(zatk) INTO result.
+      WHEN cl_abap_typedescr=>kind_ref.
+        MESSAGE e230(zatk) INTO result.
+      WHEN OTHERS.
+        MESSAGE e227(zatk) INTO result.
+    ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD technical_name.
+    CASE type->kind.
+      WHEN cl_abap_typedescr=>kind_elem.
+        result = elementary_name( type ).
+      WHEN cl_abap_typedescr=>kind_struct.
+        result = kind_word( type ).
+      WHEN cl_abap_typedescr=>kind_table.
+        DATA(line_type) = CAST cl_abap_tabledescr( type )->get_table_line_type( ).
+        MESSAGE e231(zatk) WITH describe( line_type ) INTO result.
+      WHEN cl_abap_typedescr=>kind_ref.
+        result = |REF TO { referenced_name( CAST #( type ) ) }|.
+      WHEN OTHERS.
+        result = type->get_relative_name( ).
+    ENDCASE.
+  ENDMETHOD.
+
+
+  METHOD elementary_name.
+    DATA(characters) = type->length / cl_abap_char_utilities=>charsize.
+    DATA(packed) = |P LENGTH { type->length } DECIMALS { type->decimals }|.
+    result = SWITCH #( type->type_kind
+                       WHEN cl_abap_typedescr=>typekind_char   THEN |C LENGTH { characters }|
+                       WHEN cl_abap_typedescr=>typekind_num    THEN |N LENGTH { characters }|
+                       WHEN cl_abap_typedescr=>typekind_hex    THEN |X LENGTH { type->length }|
+                       WHEN cl_abap_typedescr=>typekind_packed THEN packed
+                       WHEN cl_abap_typedescr=>typekind_string THEN `STRING`
+                       WHEN cl_abap_typedescr=>typekind_xstring THEN `XSTRING`
+                       WHEN cl_abap_typedescr=>typekind_int    THEN `I`
+                       WHEN cl_abap_typedescr=>typekind_int8   THEN `INT8`
+                       WHEN cl_abap_typedescr=>typekind_int1   THEN `INT1`
+                       WHEN cl_abap_typedescr=>typekind_int2   THEN `INT2`
+                       WHEN cl_abap_typedescr=>typekind_float  THEN `F`
+                       WHEN cl_abap_typedescr=>typekind_date   THEN `D`
+                       WHEN cl_abap_typedescr=>typekind_time   THEN `T`
+                       WHEN cl_abap_typedescr=>typekind_decfloat16 THEN `DECFLOAT16`
+                       WHEN cl_abap_typedescr=>typekind_decfloat34 THEN `DECFLOAT34`
+                       WHEN cl_abap_typedescr=>typekind_utclong THEN `UTCLONG`
+                       ELSE type->get_relative_name( ) ).
+  ENDMETHOD.
+
+
+  METHOD referenced_name.
+    DATA(referenced) = type->get_referenced_type( ).
+    DATA(is_object) = xsdbool( referenced->kind = cl_abap_typedescr=>kind_class
+                            OR referenced->kind = cl_abap_typedescr=>kind_intf ).
+    result = COND #( WHEN is_object = abap_true
+                     THEN referenced->get_relative_name( )
+                     ELSE describe( referenced ) ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -785,7 +1018,8 @@ CLASS lcl_name_hint IMPLEMENTATION.
 
   METHOD available.
     MESSAGE e208(zatk) INTO DATA(label).
-    result = |{ label } { lcl_text=>join( candidates ) }.|.
+    result = lcl_text=>labeled( label = label
+                                text  = lcl_text=>join( candidates ) ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -801,16 +1035,62 @@ CLASS lcl_value_conversion IMPLEMENTATION.
       RETURN.
     ENDIF.
     TRY.
-        IF target_type->kind = cl_abap_typedescr=>kind_ref.
-          " instance( ) of a double is typed REF TO object; only a down cast gives it the parameter type
-          <target> ?= source.
-        ELSE.
-          <target> = source.
-        ENDIF.
+        copy( source = source
+              target = target ).
         result = is_same_value( source = source
                                 target = <target> ).
       CATCH cx_sy_conversion_error cx_sy_move_cast_error cx_sy_itab_error.
         result = abap_false.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD explain_misfit.
+    ASSIGN target->* TO FIELD-SYMBOL(<target>).
+    DATA(target_type) = CAST cl_abap_datadescr( cl_abap_typedescr=>describe_by_data( <target> ) ).
+    IF fits_structurally( source      = source
+                          target_type = target_type ) = abap_false.
+      result = explain_kind_mismatch( source      = source
+                                      target_type = target_type ).
+    ELSE.
+      result = explain_copy( source = source
+                             target = target ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD copy.
+    ASSIGN target->* TO FIELD-SYMBOL(<target>).
+    DATA(target_type) = cl_abap_typedescr=>describe_by_data( <target> ).
+    IF target_type->kind = cl_abap_typedescr=>kind_ref.
+      " instance( ) of a double is typed REF TO object; only a down cast gives it the parameter type
+      <target> ?= source.
+    ELSE.
+      <target> = source.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD explain_kind_mismatch.
+    DATA(source_type) = cl_abap_typedescr=>describe_by_data( source ).
+    IF source_type->kind <> target_type->kind.
+      MESSAGE e224(zatk) WITH lcl_type_formatter=>kind_word( source_type )
+                              lcl_type_formatter=>kind_word( target_type ) INTO result.
+    ELSE.
+      " same kind, other type: a structure or table of another type, named in full
+      MESSAGE e225(zatk) WITH source_type->absolute_name INTO result.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD explain_copy.
+    ASSIGN target->* TO FIELD-SYMBOL(<target>).
+    TRY.
+        copy( source = source
+              target = target ).
+        MESSAGE e226(zatk) WITH lcl_value_formatter=>format( <target> ) INTO result.
+      CATCH cx_sy_conversion_error cx_sy_move_cast_error cx_sy_itab_error INTO DATA(error).
+        result = error->get_text( ).
     ENDTRY.
   ENDMETHOD.
 
@@ -884,8 +1164,9 @@ ENDCLASS.
 CLASS lcl_arguments IMPLEMENTATION.
 
   METHOD put.
-    INSERT VALUE #( name  = name
-                    value = value ) INTO TABLE named_values.
+    INSERT VALUE #( name        = name
+                    value       = value
+                    is_supplied = is_supplied ) INTO TABLE named_values.
   ENDMETHOD.
 
 
@@ -958,6 +1239,11 @@ CLASS lcl_arguments IMPLEMENTATION.
   METHOD describe_argument.
     ASSIGN argument-value->* TO FIELD-SYMBOL(<value>).
     result = |{ argument-name } = { lcl_value_formatter=>format( <value> ) }|.
+    IF argument-is_supplied = abap_false.
+      " the caller left the optional parameter out; ATK cannot see its DEFAULT value
+      MESSAGE e213(zatk) INTO DATA(label).
+      result = |{ result } { label }|.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.
@@ -1022,7 +1308,8 @@ CLASS lcl_doubled_method IMPLEMENTATION.
     DATA(parameter) = VALUE ty_parameter( parameter_list[ kind = cl_abap_objectdescr=>returning ] OPTIONAL ).
     IF parameter IS INITIAL.
       RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>no_returning_parameter
-                                   context = VALUE #( value1 = name( ) ) ).
+                                   context = VALUE #( value1  = name( )
+                                                      details = describe_outputs( ) ) ).
     ENDIF.
     result = to_value( parameter = parameter
                        value     = value ).
@@ -1049,8 +1336,9 @@ CLASS lcl_doubled_method IMPLEMENTATION.
       class_type = super_class_of( class_type ).
     ENDWHILE.
     RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>undeclared_exception
-                                 context = VALUE #( value1 = name( )
-                                                    value2 = exception_name ) ).
+                                 context = VALUE #( value1  = name( )
+                                                    value2  = exception_name
+                                                    details = describe_declared_exceptions( ) ) ).
   ENDMETHOD.
 
 
@@ -1074,9 +1362,11 @@ CLASS lcl_doubled_method IMPLEMENTATION.
     result = NEW #( ).
     LOOP AT parameter_list INTO DATA(parameter)
          WHERE kind = cl_abap_objectdescr=>importing OR kind = cl_abap_objectdescr=>changing.
-      result->put( name  = parameter-name
-                   value = read_argument( atdf_arguments = atdf_arguments
-                                          parameter      = parameter ) ).
+      DATA(argument) = read_argument( atdf_arguments = atdf_arguments
+                                      parameter      = parameter ).
+      result->put( name        = argument-name
+                   value       = argument-value
+                   is_supplied = argument-is_supplied ).
     ENDLOOP.
   ENDMETHOD.
 
@@ -1104,15 +1394,64 @@ CLASS lcl_doubled_method IMPLEMENTATION.
     RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>unknown_parameter
                                  context = VALUE #( value1  = name( )
                                                     value2  = parameter_name
-                                                    details = lcl_name_hint=>available( names ) ) ).
+                                                    details = lcl_name_hint=>available( parameter_names( ) ) ) ).
+  ENDMETHOD.
+
+
+  METHOD parameter_names.
+    TYPES ty_kinds TYPE STANDARD TABLE OF abap_parmkind WITH EMPTY KEY.
+
+    " inputs first, then outputs, then RETURNING: the order a reader of with( ) and sets( ) expects
+    DATA(kinds) = VALUE ty_kinds( ( cl_abap_objectdescr=>importing )
+                                  ( cl_abap_objectdescr=>changing )
+                                  ( cl_abap_objectdescr=>exporting )
+                                  ( cl_abap_objectdescr=>returning ) ).
+    LOOP AT kinds INTO DATA(kind).
+      LOOP AT parameter_list INTO DATA(parameter) WHERE kind = kind.
+        INSERT |{ parameter-name } ({ kind_name( parameter-kind ) })| INTO TABLE result.
+      ENDLOOP.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD describe_outputs.
+    DATA(outputs) = VALUE ty_texts( FOR parameter IN parameter_list
+                                    WHERE ( kind = cl_abap_objectdescr=>exporting
+                                         OR kind = cl_abap_objectdescr=>changing )
+                                    ( |{ parameter-name } ({ kind_name( parameter-kind ) })| ) ).
+    IF outputs IS INITIAL.
+      MESSAGE e217(zatk) INTO result.
+      RETURN.
+    ENDIF.
+    MESSAGE e216(zatk) INTO DATA(label).
+    result = lcl_text=>labeled( label = label
+                                text  = lcl_text=>join( outputs ) ).
+  ENDMETHOD.
+
+
+  METHOD describe_declared_exceptions.
+    IF declared_exceptions IS INITIAL.
+      MESSAGE e219(zatk) INTO result.
+      RETURN.
+    ENDIF.
+    MESSAGE e218(zatk) INTO DATA(label).
+    result = lcl_text=>labeled( label = label
+                                text  = lcl_text=>join( VALUE #( FOR exception IN declared_exceptions
+                                                                 ( CONV string( exception-name ) ) ) ) ).
   ENDMETHOD.
 
 
   METHOD add_argument.
     IF arguments->has( parameter-name ).
+      MESSAGE e220(zatk) INTO DATA(label).
+      DATA(current_value) = arguments->value_of( parameter-name ).
+      ASSIGN current_value->* TO FIELD-SYMBOL(<current>).
       RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>value_given_twice
-                                   context = VALUE #( value1 = name( )
-                                                      value2 = parameter-name ) ).
+                                   context = VALUE #( value1  = name( )
+                                                      value2  = parameter-name
+                                                      details = lcl_text=>labeled(
+                                                          label = label
+                                                          text  = lcl_value_formatter=>format( <current> ) ) ) ).
     ENDIF.
     arguments->put( name  = parameter-name
                     value = to_value( parameter = parameter
@@ -1126,9 +1465,12 @@ CLASS lcl_doubled_method IMPLEMENTATION.
     IF NOT lcl_value_conversion=>copies_losslessly( source = value
                                                     target = result ).
       RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>value_does_not_fit
-                                   context = VALUE #( value1 = lcl_value_formatter=>format( value )
-                                                      value2 = parameter-name
-                                                      value3 = type_name_of( parameter ) ) ).
+                                   context = VALUE #( value1  = lcl_value_formatter=>format( value )
+                                                      value2  = parameter-name
+                                                      value3  = type_name_of( parameter )
+                                                      details = lcl_value_conversion=>explain_misfit(
+                                                          source = value
+                                                          target = result ) ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1136,11 +1478,14 @@ CLASS lcl_doubled_method IMPLEMENTATION.
   METHOD read_argument.
     DATA source TYPE REF TO data.
 
+    result-name = parameter-name.
     TRY.
-        IF parameter-kind = cl_abap_objectdescr=>changing.
+        " a parameter the caller left out is not read: its value stays initial
+        result-is_supplied = is_supplied( atdf_arguments = atdf_arguments
+                                          parameter      = parameter ).
+        IF result-is_supplied = abap_true AND parameter-kind = cl_abap_objectdescr=>changing.
           source = atdf_arguments->get_param_changing( parameter-name ).
-        ELSEIF parameter-is_optional = abap_false
-            OR atdf_arguments->is_importing_param_supplied( parameter-name ) = abap_true.
+        ELSEIF result-is_supplied = abap_true.
           source = atdf_arguments->get_param_importing( parameter-name ).
         ENDIF.
       CATCH cx_root INTO DATA(error).
@@ -1150,8 +1495,19 @@ CLASS lcl_doubled_method IMPLEMENTATION.
                                                          details = error->get_text( ) )
                                      previous = error ).
     ENDTRY.
-    result = copy_of( source    = source
-                      parameter = parameter ).
+    result-value = copy_of( source    = source
+                            parameter = parameter ).
+  ENDMETHOD.
+
+
+  METHOD is_supplied.
+    IF parameter-is_optional = abap_false.
+      result = abap_true.
+    ELSEIF parameter-kind = cl_abap_objectdescr=>changing.
+      result = atdf_arguments->is_changing_param_supplied( parameter-name ).
+    ELSE.
+      result = atdf_arguments->is_importing_param_supplied( parameter-name ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -1239,13 +1595,7 @@ CLASS lcl_doubled_method IMPLEMENTATION.
 
 
   METHOD type_name_of.
-    IF parameter-data_type IS NOT BOUND.
-      RETURN.
-    ENDIF.
-    result = parameter-data_type->get_relative_name( ).
-    IF result IS INITIAL.
-      result = parameter-data_type->absolute_name.
-    ENDIF.
+    result = lcl_type_formatter=>describe( parameter-data_type ).
   ENDMETHOD.
 
 
@@ -1351,8 +1701,11 @@ CLASS lcl_doubled_type IMPLEMENTATION.
 
   METHOD add_methods_of.
     LOOP AT owner->methods INTO DATA(description).
+      " a method of a component interface is listed as ZIF_COMPONENT~METHOD here; it is added
+      " from its own interface instead, where RTTI knows its parameter types
       DATA(method_name) = |{ prefix }{ description-name }|.
-      IF is_configurable( description ) = abap_false OR line_exists( catalog[ name = method_name ] ).
+      IF is_configurable( description ) = abap_false OR description-name CS component_separator
+          OR line_exists( catalog[ name = method_name ] ).
         CONTINUE.
       ENDIF.
       DATA(doubled_method) = NEW lcl_doubled_method( owner       = owner
@@ -1370,6 +1723,8 @@ CLASS lcl_doubled_type IMPLEMENTATION.
       DATA(component_type) = CAST cl_abap_objectdescr( cl_abap_typedescr=>describe_by_name( component-name ) ).
       add_methods_of( owner  = component_type
                       prefix = |{ component-name }{ component_separator }| ).
+      " a component interface may include interfaces itself; the catalog skips duplicates
+      add_component_interfaces( component_type ).
     ENDLOOP.
   ENDMETHOD.
 
@@ -1445,24 +1800,52 @@ CLASS lcl_call_journal IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD explain_mismatch.
-    DATA label TYPE string.
+  METHOD explain_count.
+    MESSAGE e201(zatk) INTO DATA(label).
+    DATA(expected) = lcl_text=>labeled( label = label
+                                        text  = filter->describe( ) ).
+    IF count_matching( doubled_method = doubled_method
+                       filter         = filter ) > 0.
+      DATA(facts) = describe_matching_calls( doubled_method = doubled_method
+                                             filter         = filter ).
+    ELSE.
+      facts = describe_closest_call( doubled_method = doubled_method
+                                     filter         = filter ).
+    ENDIF.
+    result = lcl_text=>as_lines( VALUE #( ( expected ) ( facts ) ) ).
+  ENDMETHOD.
 
-    MESSAGE e201(zatk) INTO label.
-    result = |{ label } { filter->describe( ) }.|.
+
+  METHOD describe_matching_calls.
+    MESSAGE e221(zatk) INTO DATA(label).
+    DATA descriptions TYPE ty_texts.
+
+    LOOP AT calls INTO DATA(call) WHERE called_method = doubled_method.
+      IF filter->are_met_by( call-arguments ) = abap_true.
+        INSERT |({ call-arguments->describe( ) })| INTO TABLE descriptions.
+      ENDIF.
+    ENDLOOP.
+    result = lcl_text=>labeled( label = label
+                                text  = lcl_text=>join( descriptions ) ).
+  ENDMETHOD.
+
+
+  METHOD describe_closest_call.
     DATA(closest) = closest_call( doubled_method = doubled_method
                                   filter         = filter ).
     IF closest IS NOT BOUND.
-      MESSAGE e205(zatk) INTO label.
-      result = |{ result } { label }|.
+      MESSAGE e205(zatk) INTO result.
       RETURN.
     ENDIF.
-    MESSAGE e202(zatk) INTO label.
-    result = |{ result } { label } { closest->describe( ) }.|.
+    MESSAGE e202(zatk) INTO DATA(label).
+    result = lcl_text=>labeled( label = label
+                                text  = closest->describe( ) ).
     DATA(differing) = filter->names_not_met_by( closest ).
     IF differing IS NOT INITIAL.
       MESSAGE e207(zatk) INTO label.
-      result = |{ result } { label } { lcl_text=>join( differing ) }.|.
+      result = lcl_text=>as_lines( VALUE #( ( result )
+                                         ( lcl_text=>labeled( label = label
+                                                              text  = lcl_text=>join( differing ) ) ) ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1471,7 +1854,8 @@ CLASS lcl_call_journal IMPLEMENTATION.
     MESSAGE e204(zatk) INTO DATA(label).
     DATA(descriptions) = VALUE ty_texts( FOR call IN calls WHERE ( called_method = doubled_method )
                                          ( |({ call-arguments->describe( ) })| ) ).
-    result = |{ label } { lcl_text=>join( descriptions ) }.|.
+    result = lcl_text=>labeled( label = label
+                                text  = lcl_text=>join( descriptions ) ).
   ENDMETHOD.
 
 
@@ -1495,6 +1879,7 @@ CLASS lcl_call_rule IMPLEMENTATION.
   METHOD constructor.
     me->doubled_method = doubled_method.
     rule_sequence = sequence.
+    counts_calls = is_expectation.
     conditions = NEW #( ).
     outputs = NEW #( ).
   ENDMETHOD.
@@ -1576,9 +1961,26 @@ CLASS lcl_call_rule IMPLEMENTATION.
     DATA(other_conditions) = other->conditions->size( ).
     IF own_conditions <> other_conditions.
       result = xsdbool( own_conditions > other_conditions ).
+    ELSEIF is_open( ) <> other->is_open( ).
+      result = is_open( ).
     ELSE.
       result = xsdbool( rule_sequence > other->rule_sequence ).
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD is_open.
+    result = xsdbool( counts_calls = abap_false OR call_count < expected_calls ).
+  ENDMETHOD.
+
+
+  METHOD describe_conditions.
+    result = |({ conditions->describe( ) })|.
+  ENDMETHOD.
+
+
+  METHOD unmet_conditions.
+    result = conditions->names_not_met_by( arguments ).
   ENDMETHOD.
 
 
@@ -1610,8 +2012,8 @@ CLASS lcl_call_rule IMPLEMENTATION.
                     context = VALUE #( value1  = doubled_method->name( )
                                        value2  = |{ expected_calls }|
                                        value3  = |{ call_count }|
-                                       details = journal->explain_mismatch( doubled_method = doubled_method
-                                                                            filter         = conditions ) ) ).
+                                       details = journal->explain_count( doubled_method = doubled_method
+                                                                         filter         = conditions ) ) ).
   ENDMETHOD.
 
 
@@ -1633,7 +2035,7 @@ CLASS lcl_call_rule IMPLEMENTATION.
   METHOD set_returning.
     ensure_no_exception( ).
     IF returning_value IS BOUND.
-      raise_answer_already_set( ).
+      raise_answer_already_set( `returns( )` ).
     ENDIF.
     returning_value = doubled_method->returning_value( value ).
   ENDMETHOD.
@@ -1641,8 +2043,10 @@ CLASS lcl_call_rule IMPLEMENTATION.
 
   METHOD set_exception.
     ensure_no_exception( ).
-    IF returning_value IS BOUND OR outputs->size( ) > 0.
-      raise_answer_already_set( ).
+    IF returning_value IS BOUND.
+      raise_answer_already_set( `returns( )` ).
+    ELSEIF outputs->size( ) > 0.
+      raise_answer_already_set( `sets( )` ).
     ENDIF.
     doubled_method->check_declares( exception ).
     exception_to_raise = exception.
@@ -1651,14 +2055,15 @@ CLASS lcl_call_rule IMPLEMENTATION.
 
   METHOD ensure_no_exception.
     IF exception_to_raise IS BOUND.
-      raise_answer_already_set( ).
+      raise_answer_already_set( `raises( )` ).
     ENDIF.
   ENDMETHOD.
 
 
   METHOD raise_answer_already_set.
     RAISE EXCEPTION NEW zcx_atk( problem = zcx_atk=>answer_already_set
-                                 context = VALUE #( value1 = doubled_method->name( ) ) ).
+                                 context = VALUE #( value1 = doubled_method->name( )
+                                                    value2 = answer ) ).
   ENDMETHOD.
 
 
@@ -1686,7 +2091,8 @@ CLASS lcl_rulebook IMPLEMENTATION.
 
   METHOD new_rule.
     result = NEW #( doubled_method = doubled_method
-                    sequence       = lines( all_rules ) + 1 ).
+                    sequence       = lines( all_rules ) + 1
+                    is_expectation = is_expectation ).
     INSERT result INTO TABLE all_rules.
   ENDMETHOD.
 
@@ -1715,6 +2121,39 @@ CLASS lcl_rulebook IMPLEMENTATION.
 
   METHOD rules.
     result = all_rules.
+  ENDMETHOD.
+
+
+  METHOD explain_no_match.
+    DATA closest TYPE REF TO lcl_call_rule.
+    DATA fewest_unmet TYPE i.
+
+    DATA(candidates) = rules_for( doubled_method ).
+    LOOP AT candidates INTO DATA(rule).
+      DATA(unmet) = lines( rule->unmet_conditions( arguments ) ).
+      IF closest IS NOT BOUND OR unmet < fewest_unmet.
+        closest = rule.
+        fewest_unmet = unmet.
+      ENDIF.
+    ENDLOOP.
+    DATA(conditions) = VALUE ty_texts( FOR candidate IN candidates
+                                       ( candidate->describe_conditions( ) ) ).
+    DATA(facts) = VALUE ty_texts( ( lcl_text=>labeled( label = list_label
+                                                       text  = lcl_text=>join( conditions ) ) ) ).
+    IF closest IS BOUND AND fewest_unmet > 0.
+      INSERT lcl_text=>labeled( label = closest_label
+                                text  = lcl_text=>join( closest->unmet_conditions( arguments ) ) ) INTO TABLE facts.
+    ENDIF.
+    result = lcl_text=>as_lines( facts ).
+  ENDMETHOD.
+
+
+  METHOD rules_for.
+    LOOP AT all_rules INTO DATA(rule).
+      IF rule->is_for( doubled_method ) = abap_true.
+        INSERT rule INTO TABLE result.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
 ENDCLASS.
@@ -1752,8 +2191,8 @@ CLASS lcl_call_verification IMPLEMENTATION.
           context = VALUE #( value1  = doubled_method->name( )
                              value2  = |{ expected_calls }|
                              value3  = |{ actual_calls }|
-                             details = recorded_calls->explain_mismatch( doubled_method = doubled_method
-                                                                         filter         = conditions ) ) ) ).
+                             details = recorded_calls->explain_count( doubled_method = doubled_method
+                                                                      filter         = conditions ) ) ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1823,14 +2262,23 @@ CLASS lcl_call_router IMPLEMENTATION.
                                         arguments      = arguments ).
     IF rule IS BOUND.
       rule->answer( atdf_result ).
-    ELSEIF double_role = lif_role=>mock.
+      RETURN.
+    ENDIF.
+    DATA(has_rules) = call_rules->has_rules_for( doubled_method ).
+    IF double_role = lif_role=>mock AND has_rules = abap_false.
       failure_reporter->report_during_act( failure_for( problem        = zcx_atk=>unexpected_call
                                                         doubled_method = doubled_method
                                                         arguments      = arguments ) ).
-    ELSEIF call_rules->has_rules_for( doubled_method ) = abap_true.
-      failure_reporter->report_during_act( failure_for( problem        = zcx_atk=>no_matching_rule
+    ELSEIF has_rules = abap_true.
+      DATA(problem) = COND zcx_atk=>ty_problem( WHEN double_role = lif_role=>mock
+                                                THEN zcx_atk=>no_matching_expectation
+                                                ELSE zcx_atk=>no_matching_rule ).
+      DATA(explanation) = explain_no_match( doubled_method = doubled_method
+                                            arguments      = arguments ).
+      failure_reporter->report_during_act( failure_for( problem        = problem
                                                         doubled_method = doubled_method
-                                                        arguments      = arguments ) ).
+                                                        arguments      = arguments
+                                                        explanation    = explanation ) ).
     ENDIF.
   ENDMETHOD.
 
@@ -1840,10 +2288,33 @@ CLASS lcl_call_router IMPLEMENTATION.
     DATA(first_value) = COND string( WHEN problem = zcx_atk=>dummy_called
                                      THEN described_type->name( )
                                      ELSE doubled_method->name( ) ).
+    DATA(facts) = VALUE ty_texts( ( lcl_text=>labeled( label = label
+                                                       text  = arguments->describe( ) ) ) ).
+    IF explanation IS NOT INITIAL.
+      INSERT explanation INTO TABLE facts.
+    ENDIF.
     result = NEW #( problem = problem
                     context = VALUE #( value1  = first_value
                                        value2  = doubled_method->name( )
-                                       details = |{ label } { arguments->describe( ) }.| ) ).
+                                       details = lcl_text=>as_lines( facts ) ) ).
+  ENDMETHOD.
+
+
+  METHOD explain_no_match.
+    DATA list_label TYPE string.
+    DATA closest_label TYPE string.
+
+    IF double_role = lif_role=>mock.
+      MESSAGE e222(zatk) INTO list_label.
+      MESSAGE e223(zatk) INTO closest_label.
+    ELSE.
+      MESSAGE e214(zatk) INTO list_label.
+      MESSAGE e215(zatk) INTO closest_label.
+    ENDIF.
+    result = call_rules->explain_no_match( doubled_method = doubled_method
+                                           arguments      = arguments
+                                           list_label     = list_label
+                                           closest_label  = closest_label ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -1889,7 +2360,8 @@ CLASS lcl_double IMPLEMENTATION.
 
 
   METHOD zif_atk_mock~expect_call.
-    result = call_router->rulebook( )->new_rule( find_method( method_name ) ).
+    result = call_router->rulebook( )->new_rule( doubled_method = find_method( method_name )
+                                                 is_expectation = abap_true ).
   ENDMETHOD.
 
 
