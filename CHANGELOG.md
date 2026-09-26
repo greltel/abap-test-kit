@@ -25,7 +25,7 @@ Test doubles on top of `CL_ABAP_TESTDOUBLE`.
   without their interface prefix.
 - Method names, parameter names and values checked with RTTI, with suggestions for
   misspelled names; values converted without loss.
-- `ZCX_ATK` and message class `ZATK`: every text has three parts on their own lines - what
+- `ZCX_ATK` and message class `ZATK`: every text has three parts, in this order - what
   went wrong, how to fix it, and the facts: the actual arguments, the rules or expectations
   of the method and where the closest one differs, the matching or closest calls, what a
   value that does not fit would become, the parameters or outputs a method has, the
