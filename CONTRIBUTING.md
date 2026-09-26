@@ -65,9 +65,11 @@ folders.
   them
 * Every problem is a constant of `ZCX_ATK` with two messages in `ZATK`: what
   went wrong (001-099) and how to fix it (101-199). Labels used inside the
-  details are 201-299. `get_text( )` puts the three parts on their own lines
-  (`cl_abap_char_utilities=>newline`), and every detail is one line of the form
-  `Label: facts.` built with `lcl_text=>labeled( )` and `lcl_text=>as_lines( )`.
+  details are 201-299. `get_text( )` joins the three parts with
+  `zcx_atk=>part_separator` (a blank: the ABAP Unit view of ADT shows a failure
+  on one line and prints a line break as `#`), and every detail is one sentence
+  of the form `Label: facts.` built with `lcl_text=>labeled( )` and
+  `lcl_text=>sentences( )`.
   A message uses each placeholder once (abaplint `message_exists` counts them)
   and is at most 73 characters long. Exceptions of the test double framework
   are caught and translated, never passed on
@@ -207,7 +209,6 @@ on a system, this is where to look:
 | `given_generic_table_then_works` or `given_generic_input_then_works` fails | The recording call can fill generically typed parameters | `lcl_doubled_method=>concrete_type_for` |
 | `when_raises_then_caller_gets` fails | `IF_ABAP_TESTDOUBLE_RESULT->raise_exception( )` records the exception and the framework raises it after the answer | `lcl_call_rule=>answer` |
 | A failure during the act step does not show up | `CL_ABAP_UNIT_ASSERT=>fail( quit = no )` inside the answer object | `lcl_unit_failure_reporter` |
-| The three parts of a message run into one line, or a `#` shows between them | The ABAP Unit view of the tool in use does not render `cl_abap_char_utilities=>newline` inside a failure text | `zcx_atk=>line_break` |
 | abapGit: *ABAP Language Version of linked package is not compatible with repository settings*, or an object *has ABAP language version … but repository is set to …* | The packages were created with *Standard ABAP*, for example by abapGit itself | Set *ABAP for Cloud Development* on `ZATK`, `ZATK_TEST` and `ZATK_DEMO` in ADT and pull again |
 
 # Releasing
