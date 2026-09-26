@@ -6,7 +6,7 @@ All notable changes to this repository are listed here. Versions follow
 
 ## Unreleased
 
-Content of the coming `1.0.0` release.
+## [1.0.0] - 2026-09-26
 
 ### Added
 
