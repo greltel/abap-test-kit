@@ -1,6 +1,6 @@
 {
   "name": "abap-test-kit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "ABAP Test Kit: fluent test doubles and assertions for ABAP Unit. Off-stack lint and unit test toolchain (abaplint + transpiler).",
   "license": "MIT",
