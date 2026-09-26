@@ -126,8 +126,24 @@ const LOCAL_ENUMS = [
   {owner: "CLAS-ZCL_ATK-LIF_ROLE", prefix: "lif_role$", members: ["dummy", "stub", "spy", "mock"]},
 ];
 
+/*
+ * Gap of @abaplint/transpiler: an interface that includes other interfaces (INTERFACES inside
+ * an INTERFACE) is emitted without IMPLEMENTED_INTERFACES and without the component methods,
+ * so open-abap's RTTI reports no component interfaces and the ATDF stand-in cannot build the
+ * component methods. Keep this list in sync with the fixtures in src/test/.
+ */
+const INTERFACE_COMPONENTS = [
+  {interface: "ZIF_ATK_TEST_ARCHIVE", includes: ["ZIF_ATK_TEST_AUDIT_LOG"]},
+];
+
 /** runs after every ABAP object is loaded, before the tests */
 export async function afterLoad() {
+  for (const definition of INTERFACE_COMPONENTS) {
+    const owner = globalThis.abap.Classes[definition.interface];
+    if (owner !== undefined && (owner.IMPLEMENTED_INTERFACES ?? []).length === 0) {
+      owner.IMPLEMENTED_INTERFACES = [...definition.includes];
+    }
+  }
   for (const definition of LOCAL_ENUMS) {
     const owner = globalThis.abap.Classes[definition.owner];
     if (owner === undefined) {

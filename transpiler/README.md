@@ -74,18 +74,25 @@ against its new upstream version.
 | `numc = decfloat34` (also `p`, `f`) compares numerically | the runtime compares the strings `0000004711` and `4711` |
 | `IS INSTANCE OF <interface>` | the runtime uses a JavaScript `instanceof`, false for every interface |
 | `LIF_ROLE` enum members get distinct values | the transpiler emits every `ENUM` member as an integer with no value, and references members of a local interface under a name it never defines. **Keep the member list in `setup.mjs` in sync with `LIF_ROLE` in `zcl_atk.clas.locals_imp.abap`.** |
+| `IMPLEMENTED_INTERFACES` of interfaces that include interfaces | the transpiler emits an interface with `INTERFACES` inside without its components, so open-abap's RTTI lists no component interfaces and the ATDF stand-in cannot build their methods. **Keep the list `INTERFACE_COMPONENTS` in `setup.mjs` in sync with the fixtures in `src/test/`.** The stand-in then implements the component methods too and reports them to the answer as `ZIF_COMPONENT~METHOD`, which is what ATK expects from the real framework - verify on a system when `ltc_component_interface` fails there. |
 
 ## Skipped tests
 
-Listed under `options.skip` in `abap_transpile.json`:
+Listed under `options.skip` in `abap_transpile.json`; all of them run on a real system.
 
-- `ZCL_ATK LTC_STUB->WHEN_RAISES_THEN_CALLER_GETS`
-- `ZCL_ATK_DEMO_ORDER_SERVICE LTC_WITH_ATK->GIVEN_UNKNOWN_ORDER_THEN_RAISE`
-
-Both need the `RAISING` clause of a method from RTTI (`cl_abap_objectdescr->methods[]-exceptions`).
-The transpiler does not emit that metadata (`buildMethods` in `@abaplint/transpiler` writes
-parameters only), so open-abap-core cannot fill it. Until it does, only `CX_NO_CHECK`
-exceptions pass `check_declares` off-stack. Both tests run on a real system.
+- `ZCL_ATK LTC_STUB->WHEN_RAISES_THEN_CALLER_GETS` and
+  `ZCL_ATK_DEMO_ORDER_SERVICE LTC_WITH_ATK->GIVEN_UNKNOWN_ORDER_THEN_RAISE` need the `RAISING`
+  clause of a method from RTTI (`cl_abap_objectdescr->methods[]-exceptions`). The transpiler
+  does not emit that metadata (`buildMethods` in `@abaplint/transpiler` writes parameters
+  only), so open-abap-core cannot fill it. Until it does, only `CX_NO_CHECK` exceptions pass
+  `check_declares` off-stack; the other tests of `raises( )` use `ZCX_ATK` for that reason.
+- `ZCL_ATK LTC_DOUBLED_TYPE->GIVEN_STATIC_METHOD_IGNORED` needs `methods[]-is_class`, which
+  the transpiler does not emit either.
+- `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_OPTIONAL_LEFT_OUT_FAILS` needs
+  `parameters[]-is_optional`. The transpiler emits `is_optional` for every parameter as blank:
+  `buildMethods` compares the parameter name in its original case with the upper-case names
+  of `getOptional( )`. And open-abap-core's `cl_abap_objectdescr` does not copy the flag
+  into `methods[]-parameters[]` anyway.
 
 ## Known gaps worth reporting upstream
 
@@ -94,6 +101,10 @@ exceptions pass `check_declares` off-stack. Both tests run on a real system.
 2. `@abaplint/transpiler`: `CALL METHOD var->(name)` does not escape a variable named like a
    JavaScript reserved word (`double` became `double.get()` while the parameter is `$double`).
    ATK renamed the private parameter to `atdf_double` to work around it.
-3. `@abaplint/transpiler`: method metadata has no `RAISING` list (see skipped tests).
-4. `@abaplint/runtime`: `distance( )`, `numc` vs decimal comparisons, `IS INSTANCE OF` interface.
-5. `open-abap-core`: the five patched classes above.
+3. `@abaplint/transpiler`: method metadata has no `RAISING` list and no static flag, and
+   `is_optional` is always blank (see skipped tests).
+4. `@abaplint/transpiler`: an interface with `INTERFACES` inside is emitted without
+   `IMPLEMENTED_INTERFACES` (see the runtime patches).
+5. `@abaplint/runtime`: `distance( )`, `numc` vs decimal comparisons, `IS INSTANCE OF` interface.
+6. `open-abap-core`: the five patched classes above; `cl_abap_objectdescr` does not fill
+   `is_optional` and `is_class` of methods and parameters.
