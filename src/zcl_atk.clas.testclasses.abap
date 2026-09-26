@@ -646,6 +646,7 @@ CLASS ltc_stub DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     METHODS given_no_rules_then_initial FOR TESTING.
     METHODS when_args_differ_then_fails FOR TESTING RAISING cx_static_check.
     METHODS when_args_differ_then_explains FOR TESTING RAISING cx_static_check.
+    METHODS when_unmatched_names_caller FOR TESTING RAISING cx_static_check.
     METHODS given_two_rules_specific_wins FOR TESTING RAISING cx_static_check.
     METHODS given_tie_then_last_rule_wins FOR TESTING RAISING cx_static_check.
     METHODS when_called_thrice_answers FOR TESTING.
@@ -718,6 +719,20 @@ CLASS ltc_stub IMPLEMENTATION.
                                       msg = `The failure must list the rules of the method` ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( text CS |{ closest_differs_in } ORDER_ID.| )
                                       msg = `The failure must say where the closest rule differs` ).
+  ENDMETHOD.
+
+
+  METHOD when_unmatched_names_caller.
+    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
+    MESSAGE e233(zatk) INTO DATA(called_from).
+    stub->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '4711' )->returns(
+        VALUE zif_atk_test_orders=>ty_order( customer = `ACME` ) ).
+
+    orders->get_order( '0815' ).
+
+    DATA(text) = recorder->last_text( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( text CS |{ called_from } ZCL_ATK=>WHEN_UNMATCHED_NAMES_CALLER| )
+                                      msg = |The failure must say which method made the call: { text }| ).
   ENDMETHOD.
 
 
@@ -1259,15 +1274,14 @@ CLASS ltc_spy IMPLEMENTATION.
 
   METHOD when_unwanted_names_caller.
     " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
-    MESSAGE e233(zatk) INTO DATA(called_from).
+    MESSAGE e232(zatk) INTO DATA(from).
     audit_log->write( order_id = '4711' action = `CANCELLED` ).
 
     spy->was_not_called( 'WRITE' ).
 
     DATA(text) = recorder->last_text( ).
-    DATA(names_caller) = xsdbool( text CS called_from AND text CS `ZCL_ATK=>WHEN_UNWANTED_NAMES_CALLER` ).
-    cl_abap_unit_assert=>assert_true( act = names_caller
-                                      msg = `The failure must say which method called the double` ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( text CS |{ from } ZCL_ATK=>WHEN_UNWANTED_NAMES_CALLER| )
+                                      msg = |The listed call must say which method made it: { text }| ).
   ENDMETHOD.
 
 
