@@ -9,11 +9,12 @@ INTERFACE zif_atk_spy PUBLIC.
   "! See {@link zif_atk_stub.METH:when}.
   ALIASES when FOR zif_atk_stub~when.
 
-  "! Starts a check on the calls the code under test made to one method.
-  "! Narrow it with with( ) and finish it with times( ) - without times( ) nothing is checked.
+  "! Checks that the code under test called this method at least once, and fails the test
+  "! at once if it did not. Narrow the check with with( ), which fails unless a call had these
+  "! arguments, and pin the number of matching calls with times( ).
   "! Raises ZCX_ATK if the method does not exist or cannot be doubled.
   "! @parameter method_name | Method as declared in the doubled type, for example 'WRITE'
-  "! @parameter result      | The check to complete
+  "! @parameter result      | The check, to narrow with with( ) and times( )
   METHODS was_called
     IMPORTING method_name   TYPE csequence
     RETURNING VALUE(result) TYPE REF TO zif_atk_call_verification.

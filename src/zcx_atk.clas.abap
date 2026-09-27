@@ -39,7 +39,7 @@ CLASS zcx_atk DEFINITION
         fix  TYPE symsgno VALUE '101',
       END OF unknown_type.
     CONSTANTS:
-      "! &1 is a data type, not an interface
+      "! &1 is not an interface (a data type, for example)
       BEGIN OF not_an_object_type,
         what TYPE symsgno VALUE '002',
         fix  TYPE symsgno VALUE '101',
@@ -117,17 +117,11 @@ CLASS zcx_atk DEFINITION
         fix  TYPE symsgno VALUE '111',
       END OF value_given_twice.
     CONSTANTS:
-      "! times( ) of a mock needs 1 or more, but got &2
+      "! times( ) needs 1 or more, but got &2
       BEGIN OF invalid_expected_calls,
         what TYPE symsgno VALUE '015',
         fix  TYPE symsgno VALUE '112',
       END OF invalid_expected_calls.
-    CONSTANTS:
-      "! times( ) of a spy needs 0 or more, but got &2
-      BEGIN OF negative_expected_calls,
-        what TYPE symsgno VALUE '016',
-        fix  TYPE symsgno VALUE '113',
-      END OF negative_expected_calls.
     CONSTANTS:
       "! raises( ) for &1 got no exception object
       BEGIN OF missing_exception,
@@ -170,6 +164,18 @@ CLASS zcx_atk DEFINITION
         what TYPE symsgno VALUE '026',
         fix  TYPE symsgno VALUE '123',
       END OF no_matching_expectation.
+    CONSTANTS:
+      "! &1 was expected to be called, but no call was recorded
+      BEGIN OF no_call_recorded,
+        what TYPE symsgno VALUE '027',
+        fix  TYPE symsgno VALUE '124',
+      END OF no_call_recorded.
+    CONSTANTS:
+      "! &1 was called, but never with the expected arguments; the details show the closest call
+      BEGIN OF no_matching_call,
+        what TYPE symsgno VALUE '028',
+        fix  TYPE symsgno VALUE '125',
+      END OF no_matching_call.
     CONSTANTS:
       "! &1: expected &2 matching call(s), but found &3
       BEGIN OF wrong_call_count,
@@ -277,5 +283,4 @@ CLASS zcx_atk IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
-
 

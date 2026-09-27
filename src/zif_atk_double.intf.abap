@@ -4,7 +4,7 @@ INTERFACE zif_atk_double PUBLIC.
 
   "! Returns the fake object. CAST it to the doubled type where you inject it, for example
   "! <em>NEW zcl_order_service( CAST #( repository->instance( ) ) )</em>.
-  "! @parameter result | Object implementing the doubled interface or extending the doubled class
+  "! @parameter result | Object implementing the doubled interface
   METHODS instance
     RETURNING VALUE(result) TYPE REF TO object.
 

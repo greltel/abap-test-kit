@@ -9,6 +9,8 @@ INTERFACE zif_atk_test_shapes PUBLIC.
   TYPES ty_amount TYPE p LENGTH 8 DECIMALS 2.
   "! Names with a key, to test tables whose type differs only in the key
   TYPES ty_names TYPE STANDARD TABLE OF string WITH NON-UNIQUE KEY table_line.
+  "! Names in a sorted table, to test values given in another order
+  TYPES ty_sorted_names TYPE SORTED TABLE OF string WITH UNIQUE KEY table_line.
 
   "! EXPORTING parameters.
   "! @parameter full_name  | Name to split
@@ -75,6 +77,26 @@ INTERFACE zif_atk_test_shapes PUBLIC.
   "! @parameter order | Order to save
   METHODS save
     IMPORTING order TYPE zif_atk_test_orders=>ty_order.
+
+  "! A sorted table input, to test values given as a standard table in another order.
+  "! @parameter names  | Names, sorted
+  "! @parameter result | The first name
+  METHODS first_name
+    IMPORTING names         TYPE ty_sorted_names
+    RETURNING VALUE(result) TYPE string.
+
+  "! Inputs typed with the generic elementary types, which have no length.
+  "! @parameter text   | Any text field
+  "! @parameter amount | Any packed number
+  "! @parameter digits | Any numeric text
+  "! @parameter bytes  | Any byte field
+  "! @parameter result | Description of the values
+  METHODS pad
+    IMPORTING text          TYPE c
+              amount        TYPE p
+              digits        TYPE n
+              bytes         TYPE x
+    RETURNING VALUE(result) TYPE string.
 
   "! A static method, which no double can take over.
   "! @parameter result | Version of the fixture

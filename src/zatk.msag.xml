@@ -84,13 +84,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>015</MSGNR>
-     <TEXT>times( ) of a mock needs 1 or more, but got &amp;2.</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZATK</ARBGB>
-     <MSGNR>016</MSGNR>
-     <TEXT>times( ) of a spy needs 0 or more, but got &amp;2.</TEXT>
+     <TEXT>times( ) needs 1 or more, but got &amp;2.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -155,6 +149,18 @@
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
+     <MSGNR>027</MSGNR>
+     <TEXT>&amp;1 was expected to be called, but no call was recorded.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>028</MSGNR>
+     <TEXT>&amp;1 was called, but never with the expected arguments.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
      <MSGNR>101</MSGNR>
      <TEXT>Pass the name of a global interface, for example &apos;ZIF_ORDER_REPOSITORY&apos;.</TEXT>
     </T100>
@@ -180,19 +186,19 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>105</MSGNR>
-     <TEXT>with( ) is for IMPORTING and CHANGING; outputs go to sets( ).</TEXT>
+     <TEXT>with( ) is for IMPORTING and CHANGING; try sets( ) or returns( ).</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>106</MSGNR>
-     <TEXT>sets( ) is for EXPORTING and CHANGING; inputs go to with( ).</TEXT>
+     <TEXT>sets( ) is for EXPORTING and CHANGING; try with( ) or returns( ).</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>107</MSGNR>
-     <TEXT>Use sets( ) for its EXPORTING or CHANGING parameters.</TEXT>
+     <TEXT>Use sets( ) for EXPORTING or CHANGING parameters, if the method has any.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -222,13 +228,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZATK</ARBGB>
      <MSGNR>112</MSGNR>
-     <TEXT>To check that &amp;1 is never called, use a spy and was_not_called( ).</TEXT>
-    </T100>
-    <T100>
-     <SPRSL>E</SPRSL>
-     <ARBGB>ZATK</ARBGB>
-     <MSGNR>113</MSGNR>
-     <TEXT>Pass how many matching calls you expect.</TEXT>
+     <TEXT>For a method that must not be called, use was_not_called( ) of a spy.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -283,6 +283,18 @@
      <ARBGB>ZATK</ARBGB>
      <MSGNR>123</MSGNR>
      <TEXT>Adjust with( ) of the expect_call( ), or check the code under test.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>124</MSGNR>
+     <TEXT>Check the code under test; was_called( ) expects at least one call.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>125</MSGNR>
+     <TEXT>Check the code under test, or adjust the with( ) conditions.</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -487,6 +499,24 @@
      <ARBGB>ZATK</ARBGB>
      <MSGNR>234</MSGNR>
      <TEXT>line &amp;1 of the method</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>235</MSGNR>
+     <TEXT>none</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>236</MSGNR>
+     <TEXT>Other methods called:</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZATK</ARBGB>
+     <MSGNR>237</MSGNR>
+     <TEXT>The double received no call at all.</TEXT>
     </T100>
    </T100>
   </asx:values>

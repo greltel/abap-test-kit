@@ -5,6 +5,9 @@ INTERFACE zif_atk_test_archive PUBLIC.
 
   INTERFACES zif_atk_test_audit_log.
 
+  "! The component's method under a second name, to test doubles named by an alias.
+  ALIASES record FOR zif_atk_test_audit_log~write.
+
   "! The archive's own method, next to the ones of the component interface.
   "! @parameter result | Number of purged entries
   METHODS purge

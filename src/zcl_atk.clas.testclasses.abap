@@ -243,6 +243,9 @@ CLASS ltc_component_interface DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS D
     METHODS when_component_called_seen FOR TESTING.
     METHODS when_own_method_then_answered FOR TESTING.
     METHODS when_component_args_differ FOR TESTING.
+    METHODS when_own_prefix_then_found FOR TESTING.
+    METHODS when_alias_then_same_method FOR TESTING.
+    METHODS when_alias_called_then_seen FOR TESTING.
 ENDCLASS.
 
 
@@ -309,11 +312,54 @@ CLASS ltc_component_interface IMPLEMENTATION.
                                         msg = `Rules on a component method must be applied to its calls` ).
   ENDMETHOD.
 
+
+  METHOD when_own_prefix_then_found.
+    DATA(described) = lcl_doubled_type=>describe( 'ZIF_ATK_TEST_ARCHIVE' ).
+
+    DATA(purge) = described->find_method( 'ZIF_ATK_TEST_ARCHIVE~PURGE' ).
+
+    cl_abap_unit_assert=>assert_equals( act = purge->name( )
+                                        exp = `PURGE`
+                                        msg = `The prefix of the doubled interface itself is allowed` ).
+  ENDMETHOD.
+
+
+  METHOD when_alias_then_same_method.
+    " needs alias_for from RTTI, which the transpiler does not emit (skipped in abap_transpile.json)
+    DATA(described) = lcl_doubled_type=>describe( 'ZIF_ATK_TEST_ARCHIVE' ).
+
+    DATA(record) = described->find_method( 'RECORD' ).
+
+    cl_abap_unit_assert=>assert_equals( act = record->name( )
+                                        exp = `ZIF_ATK_TEST_AUDIT_LOG~WRITE`
+                                        msg = `An alias names the method it stands for` ).
+    cl_abap_unit_assert=>assert_equals( act = lines( described->doubled_methods( ) )
+                                        exp = 2
+                                        msg = `An alias is not a third method` ).
+  ENDMETHOD.
+
+
+  METHOD when_alias_called_then_seen.
+    " needs alias_for from RTTI, which the transpiler does not emit (skipped in abap_transpile.json)
+    archive->record( order_id = '4711' action = `ARCHIVED` ).
+
+    spy->was_called( 'RECORD' )->with( parameter = 'ACTION' value = `ARCHIVED` )->times( 1 ).
+
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( )
+                                         msg = `A call through the alias is a call of the method` ).
+  ENDMETHOD.
+
 ENDCLASS.
 
 
 CLASS ltc_value_conversion DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
   PRIVATE SECTION.
+    TYPES:
+      "! A structure of another type than the parameter, with the same first component
+      BEGIN OF ty_other_order,
+        id TYPE zif_atk_test_orders=>ty_order_id,
+      END OF ty_other_order.
+
     DATA conditions TYPE REF TO lcl_arguments.
 
     METHODS setup.
@@ -577,7 +623,7 @@ CLASS ltc_value_conversion IMPLEMENTATION.
 
   METHOD given_other_type_then_names_it.
     DATA(save) = method_of( type_name = 'ZIF_ATK_TEST_SHAPES' method_name = 'SAVE' ).
-    DATA(other) = VALUE zif_atk_demo_order_repo=>ty_order( id = '4711' ).
+    DATA(other) = VALUE ty_other_order( id = '4711' ).
     DATA(other_type) = cl_abap_typedescr=>describe_by_data( other )->absolute_name.
     MESSAGE e225(zatk) INTO DATA(has_the_type).
     has_the_type = |{ has_the_type } { other_type }.|.
@@ -913,7 +959,21 @@ CLASS ltc_parameter_shapes DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURA
     METHODS given_table_then_matches FOR TESTING.
     METHODS given_optional_given_matches FOR TESTING.
     METHODS given_optional_left_out_fails FOR TESTING.
+    METHODS given_left_out_initial_unmet FOR TESTING.
     METHODS when_returns_double_then_same FOR TESTING.
+    METHODS given_sorted_table_any_order FOR TESTING.
+    METHODS given_text_for_generic_numc FOR TESTING.
+    METHODS given_generic_text_then_works FOR TESTING.
+    METHODS given_generic_packed_works FOR TESTING.
+    METHODS given_generic_bytes_then_works FOR TESTING.
+    METHODS given_generic_digits_works FOR TESTING.
+
+    METHODS pad_with
+      IMPORTING text          TYPE c DEFAULT 'A'
+                amount        TYPE p DEFAULT 1
+                digits        TYPE n DEFAULT '1'
+                bytes         TYPE x DEFAULT '01'
+      RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 
 
@@ -1135,6 +1195,102 @@ CLASS ltc_parameter_shapes IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD given_left_out_initial_unmet.
+    " the recorded value of a parameter the caller left out is initial, but the method may have
+    " seen its DEFAULT; so not even a condition on the initial value is met. Off-stack the
+    " transpiler marks no parameter as optional (skipped in abap_transpile.json)
+    stub->when( 'GREET' )->with( parameter = 'SALUTATION' value = `` )->returns( `Ada` ).
+
+    shapes->greet( `Ada` ).
+
+    cl_abap_unit_assert=>assert_equals( act = recorder->problems( )
+                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>no_matching_rule ) )
+                                        msg = `A condition on a parameter the caller left out is never met` ).
+  ENDMETHOD.
+
+
+  METHOD given_sorted_table_any_order.
+    " the parameter is a sorted table; the test gives the rows as a standard table in another
+    " order. Off-stack a table created from the sorted description does not sort (skipped)
+    DATA(unsorted) = VALUE string_table( ( `Grace` ) ( `Ada` ) ).
+    stub->when( 'FIRST_NAME' )->with( parameter = 'NAMES' value = unsorted )->returns( `Ada` ).
+
+    DATA(first) = shapes->first_name( VALUE #( ( `Ada` ) ( `Grace` ) ) ).
+
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( )
+                                         msg = |A sorted table must accept unsorted rows: { recorder->last_text( ) }| ).
+    cl_abap_unit_assert=>assert_equals( act = first exp = `Ada` msg = `Rows in another order are the same table` ).
+  ENDMETHOD.
+
+
+  METHOD given_text_for_generic_numc.
+    " a generic parameter keeps the type of the test's value; the call may pass another type
+    DATA order_id TYPE zif_atk_test_orders=>ty_order_id VALUE '4711'.
+    stub->when( 'DESCRIBE' )->with( parameter = 'ANYTHING' value = '4711' )->returns( `an order` ).
+
+    DATA(description) = shapes->describe( order_id ).
+
+    cl_abap_unit_assert=>assert_equals( act = description
+                                        exp = `an order`
+                                        msg = `'4711' must match the numeric text 4711` ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( )
+                                         msg = `A text condition must match a numeric text` ).
+  ENDMETHOD.
+
+
+  METHOD given_generic_text_then_works.
+    " TYPE c without a length: RTTI reports length 0, and CREATE DATA would take length 1
+    stub->when( 'PAD' )->with( parameter = 'TEXT' value = 'ABCDEF' )->returns( `padded` ).
+
+    DATA(padded) = pad_with( text = 'ABCDEF' ).
+
+    cl_abap_unit_assert=>assert_equals( act = padded exp = `padded` msg = `A text longer than 1 must fit a generic c` ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `A generic c input must not fail` ).
+  ENDMETHOD.
+
+
+  METHOD given_generic_packed_works.
+    DATA amount TYPE p LENGTH 8 DECIMALS 2 VALUE '12.34'.
+    stub->when( 'PAD' )->with( parameter = 'AMOUNT' value = amount )->returns( `padded` ).
+
+    DATA(padded) = pad_with( amount = amount ).
+
+    cl_abap_unit_assert=>assert_equals( act = padded exp = `padded` msg = `Decimals must fit a generic p` ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `A generic p input must not fail` ).
+  ENDMETHOD.
+
+
+  METHOD given_generic_bytes_then_works.
+    DATA bytes TYPE x LENGTH 2 VALUE 'CAFE'.
+    stub->when( 'PAD' )->with( parameter = 'BYTES' value = bytes )->returns( `padded` ).
+
+    DATA(padded) = pad_with( bytes = bytes ).
+
+    cl_abap_unit_assert=>assert_equals( act = padded exp = `padded` msg = `Two bytes must fit a generic x` ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `A generic x input must not fail` ).
+  ENDMETHOD.
+
+
+  METHOD given_generic_digits_works.
+    " off-stack the transpiler describes a generic n like N LENGTH 1 (skipped in abap_transpile.json)
+    DATA digits TYPE n LENGTH 4 VALUE '4711'.
+    stub->when( 'PAD' )->with( parameter = 'DIGITS' value = digits )->returns( `padded` ).
+
+    DATA(padded) = pad_with( digits = digits ).
+
+    cl_abap_unit_assert=>assert_equals( act = padded exp = `padded` msg = `Four digits must fit a generic n` ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `A generic n input must not fail` ).
+  ENDMETHOD.
+
+
+  METHOD pad_with.
+    result = shapes->pad( text   = text
+                          amount = amount
+                          digits = digits
+                          bytes  = bytes ).
+  ENDMETHOD.
+
+
   METHOD when_returns_double_then_same.
     DATA(factory) = lth_doubles=>factory( recorder ).
     DATA(other_double) = factory->create( type_name = 'ZIF_ATK_TEST_AUDIT_LOG'
@@ -1161,8 +1317,12 @@ CLASS ltc_spy DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     METHODS when_called_once_then_passes FOR TESTING.
     METHODS when_called_twice_then_counts FOR TESTING.
     METHODS when_argument_differs_fails FOR TESTING.
-    METHODS given_no_call_then_zero_passes FOR TESTING.
+    METHODS when_differs_then_stops_there FOR TESTING.
+    METHODS when_called_alone_then_passes FOR TESTING.
+    METHODS when_with_alone_then_passes FOR TESTING.
+    METHODS when_times_zero_then_raises FOR TESTING.
     METHODS given_no_call_then_says_so FOR TESTING.
+    METHODS given_other_calls_names_them FOR TESTING.
     METHODS when_not_called_then_passes FOR TESTING.
     METHODS when_called_then_unwanted FOR TESTING.
     METHODS when_unwanted_then_lists_calls FOR TESTING.
@@ -1208,13 +1368,16 @@ CLASS ltc_spy IMPLEMENTATION.
 
 
   METHOD when_argument_differs_fails.
+    MESSAGE e207(zatk) INTO DATA(differs_in).
     audit_log->write( order_id = '4711' action = `CANCELED` ).
 
-    spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` )->times( 1 ).
+    spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` ).
 
     cl_abap_unit_assert=>assert_equals( act = recorder->problems( )
-                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>wrong_call_count ) )
-                                        msg = `A differing argument must fail the check` ).
+                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>no_matching_call ) )
+                                        msg = `with( ) must fail at once when no call has the argument` ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( recorder->last_text( ) CS |{ differs_in } ACTION.| )
+                                      msg = `The failure must say where the closest call differs` ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( recorder->last_text( ) CS `CANCELED` )
                                       msg = `The failure must show the closest actual call` ).
     cl_abap_unit_assert=>assert_true( act = xsdbool( recorder->last_text( ) CS `ACTION.` )
@@ -1222,23 +1385,80 @@ CLASS ltc_spy IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD given_no_call_then_zero_passes.
-    spy->was_called( 'WRITE' )->times( 0 ).
+  METHOD when_differs_then_stops_there.
+    " with ABAP Unit the failed with( ) ends the test; with a recorder the chain goes on, and
+    " times( ) must not report the same problem a second time
+    audit_log->write( order_id = '4711' action = `CANCELED` ).
 
-    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `times( 0 ) must pass without calls` ).
+    spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` )->times( 1 ).
+
+    cl_abap_unit_assert=>assert_equals( act = recorder->problems( )
+                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>no_matching_call ) )
+                                        msg = `Only the first failed step of the chain reports` ).
+  ENDMETHOD.
+
+
+  METHOD when_called_alone_then_passes.
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
+
+    spy->was_called( 'WRITE' ).
+
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `was_called( ) alone passes with a call` ).
+  ENDMETHOD.
+
+
+  METHOD when_with_alone_then_passes.
+    audit_log->write( order_id = '4711' action = `CANCELED` ).
+    audit_log->write( order_id = '0815' action = `CANCELLED` ).
+
+    spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` ).
+
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( ) msg = `with( ) alone passes with a match` ).
+  ENDMETHOD.
+
+
+  METHOD when_times_zero_then_raises.
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
+    DATA(check) = spy->was_called( 'WRITE' ).
+
+    TRY.
+        check->times( 0 ).
+        cl_abap_unit_assert=>fail( `times( 0 ) must be rejected; was_not_called( ) is the check for that` ).
+      CATCH zcx_atk INTO DATA(error).
+        cl_abap_unit_assert=>assert_equals( act = error->problem
+                                            exp = zcx_atk=>invalid_expected_calls
+                                            msg = `Wrong problem for zero expected calls` ).
+    ENDTRY.
   ENDMETHOD.
 
 
   METHOD given_no_call_then_says_so.
-    MESSAGE e205(zatk) INTO DATA(no_call_recorded).
+    MESSAGE e237(zatk) INTO DATA(no_call_at_all).
 
-    spy->was_called( 'WRITE' )->times( 1 ).
+    spy->was_called( 'WRITE' ).
 
     cl_abap_unit_assert=>assert_equals( act = recorder->problems( )
-                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>wrong_call_count ) )
-                                        msg = `A missing call must fail the check` ).
-    cl_abap_unit_assert=>assert_true( act = xsdbool( recorder->last_text( ) CS no_call_recorded )
-                                      msg = `The failure must say that no call was recorded` ).
+                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>no_call_recorded ) )
+                                        msg = `was_called( ) must fail at once without a call` ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( recorder->last_text( ) CS no_call_at_all )
+                                      msg = `The failure must say that the double received no call at all` ).
+  ENDMETHOD.
+
+
+  METHOD given_other_calls_names_them.
+    " the double was used, but not for the expected method: the failure names what was called
+    MESSAGE e236(zatk) INTO DATA(other_methods_called).
+    DATA(factory) = lth_doubles=>factory( recorder ).
+    DATA(orders_spy) = CAST zif_atk_spy( factory->create( type_name = 'ZIF_ATK_TEST_ORDERS' role = lif_role=>spy ) ).
+    DATA(orders) = CAST zif_atk_test_orders( orders_spy->instance( ) ).
+    orders->count_open( ).
+    orders->count_open( ).
+
+    orders_spy->was_called( 'GET_ORDER' ).
+
+    DATA(text) = recorder->last_text( ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( text CS |{ other_methods_called } COUNT_OPEN (2).| )
+                                      msg = |The failure must list the other methods with their counts: { text }| ).
   ENDMETHOD.
 
 
@@ -1286,6 +1506,7 @@ CLASS ltc_spy IMPLEMENTATION.
 
 
   METHOD when_times_negative_raises.
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
     DATA(check) = spy->was_called( 'WRITE' ).
 
     TRY.
@@ -1293,13 +1514,14 @@ CLASS ltc_spy IMPLEMENTATION.
         cl_abap_unit_assert=>fail( `A negative number of calls must be rejected` ).
       CATCH zcx_atk INTO DATA(error).
         cl_abap_unit_assert=>assert_equals( act = error->problem
-                                            exp = zcx_atk=>negative_expected_calls
+                                            exp = zcx_atk=>invalid_expected_calls
                                             msg = `Wrong problem for a negative number of calls` ).
     ENDTRY.
   ENDMETHOD.
 
 
   METHOD when_with_unknown_param_raises.
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
     DATA(check) = spy->was_called( 'WRITE' ).
 
     TRY.
@@ -1371,6 +1593,9 @@ CLASS ltc_mock DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
     METHODS when_called_too_often_fails FOR TESTING.
     METHODS given_two_expectations_met FOR TESTING.
     METHODS given_specific_and_general FOR TESTING.
+    METHODS given_specific_met_general_on FOR TESTING.
+    METHODS given_twin_unmet_then_explains FOR TESTING.
+    METHODS given_too_few_then_lists_own FOR TESTING.
     METHODS when_times_zero_then_raises FOR TESTING.
     METHODS when_expected_then_answers FOR TESTING RAISING cx_static_check.
     METHODS when_expected_then_sets_output FOR TESTING.
@@ -1496,6 +1721,56 @@ CLASS ltc_mock IMPLEMENTATION.
     mock->verify( ).
     cl_abap_unit_assert=>assert_initial( act = recorder->problems( )
                                          msg = `The specific expectation takes its call, the general one the other` ).
+  ENDMETHOD.
+
+
+  METHOD given_specific_met_general_on.
+    " the specific expectation got its call; the next matching call goes to the general one,
+    " which still waits, although it has fewer conditions
+    mock->expect_call( 'WRITE' ).
+    mock->expect_call( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELLED` ).
+
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
+    audit_log->write( order_id = '0815' action = `CANCELLED` ).
+
+    mock->verify( ).
+    cl_abap_unit_assert=>assert_initial( act = recorder->problems( )
+                                         msg = `An expectation that still waits must take the call` ).
+  ENDMETHOD.
+
+
+  METHOD given_twin_unmet_then_explains.
+    " two identical expectations, one call: the failure must not claim that the second one
+    " has a matching call, because the first one took it
+    MESSAGE e221(zatk) INTO DATA(matching_calls).
+    MESSAGE e202(zatk) INTO DATA(closest_call).
+    mock->expect_call( 'WRITE' ).
+    mock->expect_call( 'WRITE' ).
+
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
+
+    mock->verify( ).
+    DATA(text) = recorder->last_text( ).
+    cl_abap_unit_assert=>assert_equals( act = recorder->problems( )
+                                        exp = VALUE ltd_failure_recorder=>ty_problems( ( zcx_atk=>wrong_call_count ) )
+                                        msg = `The second expectation got no call` ).
+    DATA(explained) = xsdbool( text NS matching_calls AND text CS closest_call ).
+    cl_abap_unit_assert=>assert_true( act = explained
+                                      msg = |The call the twin took is the closest, not a matching one: { text }| ).
+  ENDMETHOD.
+
+
+  METHOD given_too_few_then_lists_own.
+    MESSAGE e221(zatk) INTO DATA(matching_calls).
+    mock->expect_call( 'WRITE' )->times( 2 ).
+
+    audit_log->write( order_id = '4711' action = `CANCELLED` ).
+
+    mock->verify( ).
+    DATA(text) = recorder->last_text( ).
+    DATA(lists_own_call) = xsdbool( text CS `expected 2` AND text CS |{ matching_calls } (ORDER_ID = '0000004711'| ).
+    cl_abap_unit_assert=>assert_true( act = lists_own_call
+                                      msg = |The failure must list the call the expectation got: { text }| ).
   ENDMETHOD.
 
 
@@ -2053,6 +2328,7 @@ ENDCLASS.
 CLASS ltc_arguments DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
   PRIVATE SECTION.
     METHODS given_no_values_then_any FOR TESTING.
+    METHODS given_no_arguments_then_none FOR TESTING.
     METHODS given_left_out_then_marked FOR TESTING.
     METHODS when_name_missing_then_not_met FOR TESTING.
     METHODS when_values_equal_then_met FOR TESTING.
@@ -2072,6 +2348,15 @@ CLASS ltc_arguments IMPLEMENTATION.
     DATA(text) = NEW lcl_arguments( )->describe( ).
 
     cl_abap_unit_assert=>assert_equals( act = text exp = any msg = `No conditions means any arguments` ).
+  ENDMETHOD.
+
+
+  METHOD given_no_arguments_then_none.
+    MESSAGE e235(zatk) INTO DATA(none).
+
+    DATA(text) = NEW lcl_arguments( )->describe_actual( ).
+
+    cl_abap_unit_assert=>assert_equals( act = text exp = none msg = `A method without inputs has no arguments` ).
   ENDMETHOD.
 
 
@@ -2125,6 +2410,7 @@ CLASS ltc_name_hint DEFINITION FINAL FOR TESTING RISK LEVEL HARMLESS DURATION SH
     METHODS given_close_name_then_found FOR TESTING.
     METHODS given_far_name_then_nothing FOR TESTING.
     METHODS given_candidates_then_listed FOR TESTING.
+    METHODS given_no_candidates_then_none FOR TESTING.
 ENDCLASS.
 
 
@@ -2153,6 +2439,18 @@ CLASS ltc_name_hint IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_true( act = xsdbool( text CS `COUNT_OPEN, GET_ORDER` )
                                       msg = `The candidates must be listed with commas` ).
+  ENDMETHOD.
+
+
+  METHOD given_no_candidates_then_none.
+    MESSAGE e208(zatk) INTO DATA(available).
+    MESSAGE e235(zatk) INTO DATA(none).
+
+    DATA(text) = lcl_name_hint=>available( VALUE #( ) ).
+
+    cl_abap_unit_assert=>assert_equals( act = text
+                                        exp = |{ available } { none }.|
+                                        msg = `An interface without methods must not list an empty name` ).
   ENDMETHOD.
 
 ENDCLASS.
