@@ -63,7 +63,8 @@ against its new upstream version.
 |---|---|---|
 | `cl_abap_typedescr` | constant `typekind_xsequence`; `describe_by_name` resolves `\CLASS=X\TYPE=Y` and `\INTERFACE=X\TYPE=Y` | `lcl_doubled_method`, `lcl_doubled_type` |
 | `cl_abap_datadescr` | `applies_to_data` implemented (upstream: todo) | `lcl_value_conversion` for structures |
-| `cl_abap_objectdescr` | generic parameter types `ANY`, `DATA`, `SIMPLE` are generic descriptions, not `C LENGTH 4` | rules on generic parameters |
+| `cl_abap_objectdescr` | generic parameter types `ANY`, `DATA`, `SIMPLE` are generic descriptions, not `C LENGTH 4`; the generic `c`, `p` and `x` are elementary descriptions with length 0, like SAP's RTTI (a generic `n` is emitted like `N LENGTH 1` and cannot be told apart) | rules on generic parameters |
+| `cl_abap_elemdescr` | `get_p`, `get_x`, `get_decfloat34` implemented (upstream: todo) | placeholders for the recording call of generic parameters |
 | `cl_abap_classdescr` | `get_super_class_type` implemented (upstream: todo) | `check_declares`, the `CX_NO_CHECK` walk |
 | `kernel_create_data_handle` | `REF TO <interface>` handles; every generic handle raises `cx_sy_create_data_error` | doubles returning doubles, generic parameters |
 
@@ -75,6 +76,7 @@ against its new upstream version.
 | `numc = decfloat34` (also `p`, `f`) compares numerically | the runtime compares the strings `0000004711` and `4711` |
 | `IS INSTANCE OF <interface>` | the runtime uses a JavaScript `instanceof`, false for every interface |
 | `LIF_ROLE` enum members get distinct values | the transpiler emits every `ENUM` member as an integer with no value, and references members of a local interface under a name it never defines. **Keep the member list in `setup.mjs` in sync with `LIF_ROLE` in `zcl_atk.clas.locals_imp.abap`.** |
+| `abap.types.typeTodoPGenericType` | the transpiler emits that constructor, which does not exist, for a parameter typed with the generic `p`; a packed number with 14 decimals stands in for it |
 | `IMPLEMENTED_INTERFACES` of interfaces that include interfaces | the transpiler emits an interface with `INTERFACES` inside without its components, so open-abap's RTTI lists no component interfaces and the ATDF stand-in cannot build their methods. **Keep the list `INTERFACE_COMPONENTS` in `setup.mjs` in sync with the fixtures in `src/test/`.** The stand-in then implements the component methods too and reports them to the answer as `ZIF_COMPONENT~METHOD`, which is what ATK expects from the real framework - verify on a system when `ltc_component_interface` fails there. |
 
 ## Skipped tests
@@ -93,7 +95,14 @@ Listed under `options.skip` in `abap_transpile.json`; all of them run on a real 
   `ZCL_ATK LTC_CALL_SITE->WHEN_ASKED_THEN_NAMES_CALLER` read the real call stack through XCO; the
   stand-in in `xco/` returns no frames. The rest of `ltc_call_site` runs off-stack on recorded
   stack lines.
-- `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_OPTIONAL_LEFT_OUT_FAILS` needs
+- `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_GENERIC_DIGITS_WORKS`: a generic `n` parameter is emitted
+  like `N LENGTH 1`, so the stand-in cuts the value.
+- `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_SORTED_TABLE_ANY_ORDER`: a table created with
+  `CREATE DATA ... TYPE HANDLE` from the description of a sorted table does not sort its rows
+  in open-abap-core.
+- `ZCL_ATK LTC_COMPONENT_INTERFACE->WHEN_ALIAS_THEN_SAME_METHOD` and `WHEN_ALIAS_CALLED_THEN_SEEN`
+  need `methods[]-alias_for`, which the transpiler does not emit.
+- `ZCL_ATK LTC_PARAMETER_SHAPES->GIVEN_OPTIONAL_LEFT_OUT_FAILS` and `GIVEN_LEFT_OUT_INITIAL_UNMET` need
   `parameters[]-is_optional`. The transpiler emits `is_optional` for every parameter as blank:
   `buildMethods` compares the parameter name in its original case with the upper-case names
   of `getOptional( )`. And open-abap-core's `cl_abap_objectdescr` does not copy the flag
@@ -106,10 +115,13 @@ Listed under `options.skip` in `abap_transpile.json`; all of them run on a real 
 2. `@abaplint/transpiler`: `CALL METHOD var->(name)` does not escape a variable named like a
    JavaScript reserved word (`double` became `double.get()` while the parameter is `$double`).
    ATK renamed the private parameter to `atdf_double` to work around it.
-3. `@abaplint/transpiler`: method metadata has no `RAISING` list and no static flag, and
-   `is_optional` is always blank (see skipped tests).
+3. `@abaplint/transpiler`: method metadata has no `RAISING` list, no static flag and no
+   `alias_for`, `is_optional` is always blank, a generic `p` parameter references the missing
+   `abap.types.typeTodoPGenericType`, and a generic `n` is not distinguishable from `N LENGTH 1`
+   (see skipped tests and runtime patches).
 4. `@abaplint/transpiler`: an interface with `INTERFACES` inside is emitted without
    `IMPLEMENTED_INTERFACES` (see the runtime patches).
 5. `@abaplint/runtime`: `distance( )`, `numc` vs decimal comparisons, `IS INSTANCE OF` interface.
-6. `open-abap-core`: the five patched classes above; `cl_abap_objectdescr` does not fill
-   `is_optional` and `is_class` of methods and parameters.
+6. `open-abap-core`: the six patched classes above; `cl_abap_objectdescr` does not fill
+   `is_optional` and `is_class` of methods and parameters; `CREATE DATA ... TYPE HANDLE` of a
+   sorted table description creates a table that does not sort.
