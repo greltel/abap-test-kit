@@ -467,26 +467,115 @@ service->cancel( '4711' ).
 strict_log->verify( ).
 ```
 
-## A call with arguments no rule matches
+## The same mistake, both messages
 
-The configuration is for order `4711`, but the code under test asks for `0815`.
-The classic framework finds no matching configuration and returns an initial
-order, and the test fails later, if at all. A stub with rules for `GET_ORDER`
-fails the test at the call:
+Three mistakes, each made twice in the demo test class - once with `CL_ABAP_TESTDOUBLE`,
+once with the library - and what ABAP Unit shows for each. The texts are copied from the
+ADT result on an S/4HANA 2023 system; the first line is the message of the failure, the
+rest its details.
+
+### The expected action is misspelled
+
+The test expects `CANCELED`; the service writes `CANCELLED`.
+
+```abap
+" Before
+cl_abap_testdouble=>configure_call( audit_log )->and_expect( )->is_called_times( 1 ).
+audit_log->write( order_id = '4711' action = `CANCELED` ).
+cut->cancel( '4711' ).
+cl_abap_testdouble=>verify_expectations( audit_log ).
+```
+
+```text
+Exception Error <CX_ATD_EXCEPTION>
+[ ABAP Testdouble Framework ] Method WRITE was expected to be called 1 times, but was called 0 times
+```
+
+```abap
+" After
+cut->cancel( '4711' ).
+audit_log->was_called( 'WRITE' )->with( parameter = 'ACTION' value = `CANCELED` ).
+```
+
+```text
+WRITE was called, but never with the expected arguments.
+Check the code under test, or adjust the with( ) conditions.
+Expected arguments: ACTION = 'CANCELED'.
+Closest actual call: ORDER_ID = '0000004711', ACTION = 'CANCELLED' from ZCL_ATK_DEMO_ORDER_SERVICE=>ZIF_ATK_DEMO_ORDER_SERVICE~CANCEL, line 6 of the method.
+Differs in: ACTION.
+```
+
+The classic framework counts calls that match the recorded one: zero, and nothing about
+the call that did happen. The library shows the call, the parameter that differs and the
+line of the code under test that made it.
+
+### The double is configured for another order
+
+The double answers for order `0815`; the code under test asks for `4711`.
+
+```abap
+" Before
+cl_abap_testdouble=>configure_call( repository )->returning( lth_orders=>cancelled_order( ) ).
+repository->get_order( '0815' ).
+DATA(is_cancelled) = cut->is_cancelled( '4711' ).
+cl_abap_unit_assert=>assert_true( act = is_cancelled msg = `A cancelled order must be reported as cancelled` ).
+```
+
+```text
+Critical Assertion Error: 'A cancelled order must be reported as cancelled'
+True expected
+```
+
+```abap
+" After
+repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '0815' )->returns( lth_orders=>cancelled_order( ) ).
+DATA(is_cancelled) = cut->is_cancelled( '4711' ).
+```
 
 ```text
 GET_ORDER was called with arguments that match none of its rules.
 Add a rule for these arguments, or check the code under test.
-Actual arguments: ORDER_ID = '0000000815'.
-Called from: ZCL_ATK_DEMO_ORDER_SERVICE=>ZIF_ATK_DEMO_ORDER_SERVICE~CANCEL, line 2 of the method.
-Rules: (ORDER_ID = '0000004711').
+Actual arguments: ORDER_ID = '0000004711'.
+Called from: ZCL_ATK_DEMO_ORDER_SERVICE=>ZIF_ATK_DEMO_ORDER_SERVICE~IS_CANCELLED, line 2 of the method.
+Rules: (ORDER_ID = '0000000815').
 Closest rule differs in: ORDER_ID.
 ```
 
-The failure list of ABAP Unit shows the first line; the rest is the detail of the failure
-(Analysis in the SAP GUI, Details in ADT). The classic framework fails in the same place -
-at the call - only when an expectation is configured for it; the line it shows is the one
-of the framework, and the method of the code under test is somewhere in the stack trace.
+The classic framework finds no matching configuration, returns an initial order and says
+nothing; the test fails at its own assertion, and the developer starts debugging. The
+library fails at the call, with both order numbers side by side.
+
+### A value that does not fit the parameter
+
+`'ABC'` for an order number of type `N LENGTH 10`.
+
+```abap
+" Before
+DATA(order_id) = 'ABC'.
+cl_abap_testdouble=>configure_call( repository )->returning( lth_orders=>cancelled_order( ) ).
+repository->get_order( order_id ).
+```
+
+```text
+Critical Assertion Error: 'A cancelled order must be reported as cancelled'
+True expected
+```
+
+```abap
+" After
+repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = order_id )->returns( lth_orders=>cancelled_order( ) ).
+```
+
+```text
+Exception Error <ZCX_ATK>
+Value 'ABC' does not fit parameter ORDER_ID of type TY_ORDER_ID (N LENGTH 10).
+Pass a value of that type, for example a typed variable.
+Instead, the parameter would hold: '0000000000'.
+```
+
+The recording call converts `'ABC'` to `0000000000` silently, so the classic framework is
+configured for an order that no test asks for; the failure comes from the assertion at the
+end. The library rejects the value where it is written.
 
 ## Summary
 
