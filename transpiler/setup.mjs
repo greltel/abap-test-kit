@@ -107,6 +107,20 @@ function patchInstanceOf(abap) {
   abap.compare = Object.assign({}, abap.compare, {instance_of});
 }
 
+/*
+ * Gap of @abaplint/transpiler: a parameter typed with the generic p (TYPE p without a length)
+ * is emitted as "new abap.types.typeTodoPGenericType()", a constructor that does not exist.
+ * A packed number that keeps 14 decimals stands in for it, so that a value with decimals
+ * survives the call; ATK compares it numerically with the value of the test.
+ */
+function patchGenericPacked(abap) {
+  if (abap.types.typeTodoPGenericType === undefined) {
+    abap.types.typeTodoPGenericType = function() {
+      return new abap.types.Packed({length: 16, decimals: 14});
+    };
+  }
+}
+
 /** runs before any ABAP object is loaded */
 export async function setup(abap) {
   if (abap.builtin.distance === undefined) {
@@ -114,6 +128,7 @@ export async function setup(abap) {
   }
   patchNumcComparison(abap);
   patchInstanceOf(abap);
+  patchGenericPacked(abap);
 }
 
 /*
