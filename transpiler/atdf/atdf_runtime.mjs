@@ -25,7 +25,8 @@
 
 const GENERIC_PARAMETER_TYPES = new Set([
   "AnyType", "CLikeType", "CSequenceType", "DataType", "SimpleType", "NumericGenericType",
-  "XSequenceType", "XGenericType", "GenericObjectReferenceType", "UnknownType", "VoidType",
+  "XSequenceType", "XGenericType", "CGenericType", "PGenericType", "GenericObjectReferenceType",
+  "UnknownType", "VoidType",
 ]);
 
 /** state of every double, keyed by the raw double instance */
@@ -92,8 +93,12 @@ function isGenericTable(type, parameter) {
 /** copy of an argument, converted to the formal parameter type like a real method call */
 function copyAsFormalType(value, parameter) {
   const source = toAbapValue(resolvePointer(value));
+  // the type factory of a generic p (PGenericType) does not exist in the runtime: check the name first
+  if (GENERIC_PARAMETER_TYPES.has(parameter.type_name)) {
+    return typeof source.clone === "function" ? source.clone() : source;
+  }
   const formal = parameter.type();
-  if (GENERIC_PARAMETER_TYPES.has(parameter.type_name) || isGenericTable(formal, parameter)) {
+  if (isGenericTable(formal, parameter)) {
     return typeof source.clone === "function" ? source.clone() : source;
   }
   if (source instanceof abap.types.ABAPObject || formal instanceof abap.types.ABAPObject) {
