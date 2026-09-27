@@ -136,12 +136,12 @@ test needs a parameter shape that does not exist yet.
 | Test class | Covers |
 |---|---|
 | `ltc_doubled_type` | Only interfaces can be doubled; the messages for classes, data types and unknown types; name normalization, suggestions, static methods, the method names ATDF reports |
-| `ltc_component_interface` | Methods of a component interface, named with or without the prefix, routed and matched |
+| `ltc_component_interface` | Methods of a component interface, named with or without the prefix, with the prefix of the doubled interface or by an alias, routed and matched. The two alias tests need `alias_for` from RTTI and run on a system only |
 | `ltc_value_conversion` | Conversion of rule values to the parameter types, without loss, for inputs, outputs and RETURNING; the reason a value does not fit |
 | `ltc_stub` | Rules, matching order, strict stubs, one answer per rule, exceptions |
-| `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic, structure, table, reference and optional parameters |
-| `ltc_spy` | `was_called( )`, `was_not_called( )` and their messages; a spy answers like a stub |
-| `ltc_mock` | `expect_call( )`, `verify( )`, undeclared and surplus calls, several expectations per method, answers of expectations |
+| `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic (including the generic `c`, `n`, `p`, `x`), structure, table, sorted table, reference and optional parameters. `given_generic_digits_works`, `given_left_out_initial_unmet` and `given_sorted_table_any_order` run on a system only |
+| `ltc_spy` | `was_called( )`, `with( )` and `times( )` as checks of their own, `was_not_called( )`, their messages; a spy answers like a stub |
+| `ltc_mock` | `expect_call( )`, `verify( )`, undeclared and surplus calls, several expectations per method and which one takes a call, what the failure of an unmet expectation lists, answers of expectations |
 | `ltc_dummy` | Calls of a dummy |
 | `ltc_call_router` | Nothing escapes from the ATDF answer into the code under test |
 | `ltc_facade` | The entry points of `ZCL_ATK` |
@@ -196,7 +196,7 @@ there and which tests only run on a real system.
 | `lcl_call_journal` | Every call the double received, with its arguments and where it came from |
 | `lcl_call_site` | The method and line of the code under test that called the double, read from the XCO call stack (`xco_cp=>current->call_stack`, ADT format, include line numbers) while the double answers; `CL_ABAP_GET_CALL_STACK` is not permitted in ABAP for Cloud Development. The frames of ATK, of SAP (`[system]`) and of the test double framework (`CL_ATD*`, `CL_ABAP_TESTDOUBLE*`, generated `%_*`) are skipped |
 | `lcl_call_router` | The answer object the test double framework calls |
-| `lcl_call_verification` | A `was_called( )` check |
+| `lcl_call_verification` | A `was_called( )` check; every step checks at once, and after a failed step the rest of the chain reports nothing more |
 | `lcl_double` | The object behind `ZIF_ATK_DUMMY`, `ZIF_ATK_STUB`, `ZIF_ATK_SPY` and `ZIF_ATK_MOCK` |
 | `lcl_unit_failure_reporter` | Reports failures during the act step to ABAP Unit |
 | `lcl_value_formatter`, `lcl_type_formatter`, `lcl_name_hint`, `lcl_text` | Values, types (`TY_ORDER_ID (N LENGTH 10)`), name suggestions and texts for the messages |
@@ -223,6 +223,9 @@ on a system, this is where to look:
 | A failure during the act step does not show up | `CL_ABAP_UNIT_ASSERT=>fail( quit = no )` inside the answer object | `lcl_unit_failure_reporter` |
 | `when_unwanted_names_caller`, `when_unmatched_names_caller` or `when_asked_then_names_caller` fails, or a failure names a frame of the framework as the origin | The ADT format of the XCO call stack: `OBJECT [system]    event [method]` with the line number, innermost frame first, and how the frames of the generated double and of `CL_ATD_*` are written | `lcl_call_site=>parse`, `is_machinery`; add the object pattern to the `framework` constants |
 | The origins have no line numbers, or the numbers are those of the source view | The line number flavor: `include` counts from the `METHOD` statement, `source` gives the line of the source view through source scans and costs more on every call | `lcl_call_site=>frames`, message `234` |
+| `given_generic_text_then_works`, `given_generic_packed_works`, `given_generic_bytes_then_works` or `given_generic_digits_works` fails with *does not fit* | RTTI describes a parameter typed with the generic `c`, `n`, `p` or `x` with length 0, while `CREATE DATA ... TYPE HANDLE` would silently take the standard length (C 1, N 1, X 1, P 8) | `lcl_doubled_method=>is_generic_elementary` |
+| `when_alias_then_same_method` or `when_alias_called_then_seen` fails | `methods[]-alias_for` of RTTI holds the aliased name as `ZIF_COMPONENT~METHOD` | `lcl_doubled_type=>add_aliases` |
+| `given_sorted_table_any_order` fails | An assignment to a sorted table sorts the rows, and a value of a table type with the same line type is accepted without comparing the rows | `lcl_value_conversion=>copies_losslessly` |
 | abapGit: *ABAP Language Version of linked package is not compatible with repository settings*, or an object *has ABAP language version … but repository is set to …* | The packages were created with *Standard ABAP*, for example by abapGit itself | Set *ABAP for Cloud Development* on `ZATK`, `ZATK_TEST` and `ZATK_DEMO` in ADT and pull again |
 
 # Releasing
