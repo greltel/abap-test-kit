@@ -157,6 +157,17 @@ CLASS cl_abap_objectdescr IMPLEMENTATION.
     ELSEIF lv_type_name = 'SimpleType'.
       <parameter>-type_kind = cl_abap_typedescr=>typekind_simple.
       <ptype>-type_kind = cl_abap_typedescr=>typekind_simple.
+    " patch: the generic elementary types c, p and x have no length; SAP's RTTI reports them
+    " with length 0 (a generic n is emitted like N LENGTH 1 and cannot be told apart)
+    ELSEIF lv_type_name = 'CGenericType'.
+      <parameter>-type_kind = cl_abap_typedescr=>typekind_char.
+      <ptype>-type_kind = cl_abap_typedescr=>typekind_char.
+    ELSEIF lv_type_name = 'PGenericType'.
+      <parameter>-type_kind = cl_abap_typedescr=>typekind_packed.
+      <ptype>-type_kind = cl_abap_typedescr=>typekind_packed.
+    ELSEIF lv_type_name = 'XGenericType'.
+      <parameter>-type_kind = cl_abap_typedescr=>typekind_hex.
+      <ptype>-type_kind = cl_abap_typedescr=>typekind_hex.
     ELSE.
       GET REFERENCE OF lv_any INTO <ptype>-type.
 "       WRITE '@KERNEL   if (lv_any.constructor.name === "ABAPObject") {'.
@@ -265,6 +276,15 @@ CLASS cl_abap_objectdescr IMPLEMENTATION.
       p_descr_ref->absolute_name = '\TYPE=SIMPLE'.
       p_descr_ref->kind = cl_abap_elemdescr=>kind_elem.
       p_descr_ref->type_kind = cl_abap_typedescr=>typekind_simple.
+    " patch: generic c, p, x: an elementary description with length 0, like SAP's RTTI
+    ELSEIF ls_row-type_kind = cl_abap_typedescr=>typekind_char
+        OR ls_row-type_kind = cl_abap_typedescr=>typekind_packed
+        OR ls_row-type_kind = cl_abap_typedescr=>typekind_hex.
+      CREATE OBJECT p_descr_ref TYPE cl_abap_elemdescr.
+      p_descr_ref->absolute_name = |\TYPE={ ls_row-type_kind }|.
+      p_descr_ref->kind = cl_abap_elemdescr=>kind_elem.
+      p_descr_ref->type_kind = ls_row-type_kind.
+      p_descr_ref->length = 0.
     ELSE.
       ASSIGN ls_row-type->* TO <type>.
       p_descr_ref ?= describe_by_data( <type> ).
