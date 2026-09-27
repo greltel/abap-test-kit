@@ -6,6 +6,11 @@ All notable changes to this repository are listed here. Versions follow
 
 ## Unreleased
 
+### Changed
+
+- README: section *The same mistake, both messages* - three mistakes made with
+  `CL_ABAP_TESTDOUBLE` and with the library, with the texts ABAP Unit shows for each.
+
 ## [1.1.0] - 2026-09-27
 
 ### Added
