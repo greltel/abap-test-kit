@@ -11,7 +11,8 @@
         "cl_abap_datadescr\\.clas",
         "cl_abap_objectdescr\\.clas",
         "cl_abap_classdescr\\.clas",
-        "kernel_create_data_handle\\.clas"
+        "kernel_create_data_handle\\.clas",
+        "cl_abap_elemdescr\\.clas"
       ]
     },
     {
@@ -83,6 +84,146 @@
         "object": "ZCL_ATK",
         "class": "LTC_STUB",
         "method": "WHEN_UNMATCHED_NAMES_CALLER"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_GENERIC_DIGITS_WORKS"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_COMPONENT_INTERFACE",
+        "method": "WHEN_ALIAS_THEN_SAME_METHOD"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_COMPONENT_INTERFACE",
+        "method": "WHEN_ALIAS_CALLED_THEN_SEEN"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_LEFT_OUT_INITIAL_UNMET"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_SORTED_TABLE_ANY_ORDER"
+      }
+    ]
+  }
+}
+{
+  "input_folder": "src",
+  "input_filter": [],
+  "output_folder": "output",
+  "libs": [
+    {
+      "folder": "deps/open-abap-core",
+      "files": "/src/**/*.*",
+      "exclude_filter": [
+        "cl_abap_typedescr\\.clas",
+        "cl_abap_datadescr\\.clas",
+        "cl_abap_objectdescr\\.clas",
+        "cl_abap_classdescr\\.clas",
+        "kernel_create_data_handle\\.clas",
+        "cl_abap_elemdescr\\.clas"
+      ]
+    },
+    {
+      "folder": "transpiler/open-abap-patches",
+      "files": "/**/*.abap"
+    },
+    {
+      "folder": "abaplint-stubs",
+      "files": "/**/*.abap",
+      "exclude_filter": [
+        "cl_abap_unit_assert",
+        "if_abap_unit_constant",
+        "cl_abap_testdouble"
+      ]
+    },
+    {
+      "folder": "transpiler/atdf",
+      "files": "/**/*.abap"
+    },
+    {
+      "folder": "transpiler/xco",
+      "files": "/**/*.abap"
+    }
+  ],
+  "write_unit_tests": true,
+  "write_source_map": true,
+  "options": {
+    "ignoreSyntaxCheck": false,
+    "addFilenames": true,
+    "addCommonJS": true,
+    "unknownTypes": "compileError",
+    "setup": {
+      "filename": "../transpiler/setup.mjs",
+      "preFunction": "setup",
+      "postFunction": "afterLoad"
+    },
+    "skip": [
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_STUB",
+        "method": "WHEN_RAISES_THEN_CALLER_GETS"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_DOUBLED_TYPE",
+        "method": "GIVEN_STATIC_METHOD_IGNORED"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_OPTIONAL_LEFT_OUT_FAILS"
+      },
+      {
+        "object": "ZCL_ATK_DEMO_ORDER_SERVICE",
+        "class": "LTC_WITH_ATK",
+        "method": "GIVEN_UNKNOWN_ORDER_THEN_RAISE"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_SPY",
+        "method": "WHEN_UNWANTED_NAMES_CALLER"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_CALL_SITE",
+        "method": "WHEN_ASKED_THEN_NAMES_CALLER"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_STUB",
+        "method": "WHEN_UNMATCHED_NAMES_CALLER"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_GENERIC_DIGITS_WORKS"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_COMPONENT_INTERFACE",
+        "method": "WHEN_ALIAS_THEN_SAME_METHOD"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_COMPONENT_INTERFACE",
+        "method": "WHEN_ALIAS_CALLED_THEN_SEEN"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_LEFT_OUT_INITIAL_UNMET"
+      },
+      {
+        "object": "ZCL_ATK",
+        "class": "LTC_PARAMETER_SHAPES",
+        "method": "GIVEN_SORTED_TABLE_ANY_ORDER"
       }
     ]
   }
