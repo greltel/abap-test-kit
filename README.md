@@ -40,6 +40,8 @@ The library is written against the **ABAP for Cloud Development** language versi
 * SAP S/4HANA 2023 (or higher) OR SAP BTP ABAP Environment
 * ABAP language version: ABAP for Cloud Development
 * ABAP Test Double Framework (`CL_ABAP_TESTDOUBLE`)
+* XCO library with the call stack API (`XCO_CP_CALL_STACK`), which names the method and line
+  that called a double in failure messages
 * Statement compatibility from v758 and Cloud
 
 Verified with the ABAP Cloud Developer Trial 2025 (SAP S/4HANA 2023 based) and, on every push,
@@ -169,8 +171,9 @@ through one exception class, `ZCX_ATK`.
 | answer only for an argument | `stub->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '4711' )->returns( order )` |
 | fill an EXPORTING or CHANGING parameter | `stub->when( 'READ' )->sets( parameter = 'MESSAGES' value = messages )` |
 | raise an exception | `stub->when( 'GET_ORDER' )->raises( NEW zcx_not_found( ) )` |
-| check that a method was called | `spy->was_called( 'WRITE' )->times( 1 )` |
-| check the arguments of the call | `spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = 'CANCELLED' )->times( 1 )` |
+| check that a method was called | `spy->was_called( 'WRITE' )` |
+| check the arguments of the call | `spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = 'CANCELLED' )` |
+| check how often it was called | `spy->was_called( 'WRITE' )->with( parameter = 'ACTION' value = 'CANCELLED' )->times( 2 )` |
 | check that a method was not called | `spy->was_not_called( 'DELETE' )` |
 | declare every call up front | `mock->expect_call( 'WRITE' )->times( 2 )` ... `mock->verify( )` |
 | name a method of a component interface | `when( 'WRITE' )` or `when( 'ZIF_LOG~WRITE' )` |
@@ -228,16 +231,19 @@ repository->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '0000' )->
 ## Spy
 
 A stub that also records every call. The test checks the calls after the act
-step with `was_called( )`, narrows the check with `with( )` and closes it with
-`times( )`, which performs the check - `times( 0 )` and `was_not_called( )`
-both check that no matching call happened. A failed check shows the expected
-arguments, the closest actual call with the method and line it came from, and the
-parameters that differ.
+step, and every step of the check is a check of its own: `was_called( )` fails
+the test unless the method was called at least once, each `with( )` fails unless
+a call had the arguments named so far, and `times( n )` fails unless exactly `n`
+calls matched. So a check that stops early still checks something, and
+`was_called( 'WRITE' )` alone reads exactly as it works. For a method that must
+not be called, use `was_not_called( )`; `times( 0 )` is rejected. A failed check
+shows the expected arguments, the closest actual call with the method and line it
+came from, and the parameters that differ.
 
 | Interface | Purpose |
 |---|---|
 | `ZIF_ATK_SPY` | `instance( )`, `when( )`, `was_called( )`, `was_not_called( )` |
-| `ZIF_ATK_CALL_VERIFICATION` | Fluent: `with( )`, closed with `times( )` |
+| `ZIF_ATK_CALL_VERIFICATION` | Fluent: `with( )`, `times( )` - each one checks at once |
 
 ```abap
 DATA(audit_log) = zcl_atk=>spy( 'ZIF_AUDIT_LOG' ).
@@ -253,8 +259,8 @@ audit_log->was_not_called( 'DELETE' ).
 ```
 
 ```text
-WRITE: expected 1 matching call(s), but found 0.
-Check the code under test, or adjust with( ) and times( ).
+WRITE was called, but never with the expected arguments.
+Check the code under test, or adjust the with( ) conditions.
 Expected arguments: ORDER_ID = '0000004711', ACTION = 'CANCELLED'.
 Closest actual call: ORDER_ID = '0000004711', ACTION = 'CANCELED' from ZCL_ORDER_SERVICE=>ZIF_ORDER_SERVICE~CANCEL, line 6 of the method.
 Differs in: ACTION.
@@ -267,8 +273,8 @@ call is declared with `expect_call( )` before the act step; a call that was not
 declared fails the test at once, and `verify( )` reports declared calls that did
 not happen as often as declared. Without `times( )` an expectation expects
 exactly one call, and it can answer like a stub rule. Two expectations for the
-same method are two calls: each call is matched to the most specific expectation
-that still waits for a call.
+same method are two calls: each call goes to an expectation that still waits for
+a call, and among those to the most specific one.
 
 | Interface | Purpose |
 |---|---|
@@ -318,7 +324,7 @@ Instead, the parameter would hold: 12.35.
 
 ```text
 FIRST_NAME of SPLIT_NAME is declared EXPORTING, not as an input.
-with( ) is for IMPORTING and CHANGING; outputs go to sets( ).
+with( ) is for IMPORTING and CHANGING; try sets( ) or returns( ).
 ```
 
 # Before and After
@@ -518,10 +524,16 @@ refactoring in ADT does not update them.
   value, because RTTI does not expose defaults. A condition on such a parameter is not met, and
   the failure marks the parameter with `(not supplied)`.
 * Mandatory parameters typed generically as `SORTED TABLE` or `HASHED TABLE` cannot be doubled
-  yet; `ANY TABLE`, `INDEX TABLE`, `STANDARD TABLE`, `ANY`, `DATA` and the other generic types work.
+  yet; `ANY TABLE`, `INDEX TABLE`, `STANDARD TABLE`, `ANY`, `DATA`, `c`, `n`, `p`, `x` and the
+  other generic types work. A condition on a generic parameter keeps the type of the value
+  the test gives; the value of the call is compared in that type, or the other way round.
+* A value given with `sets( )` or `returns( )` for a generically typed **output** (`EXPORTING`
+  or `CHANGING` `TYPE any`, `TYPE STANDARD TABLE`, ...) is handed to the framework without a
+  check against the variable of the caller, because that variable is not known when the rule
+  is written.
 * `with( )` compares for equality. Matchers such as "any text containing" are planned.
-* A spy check without `times( )` checks nothing; a mock that is never verified checks only
-  the undeclared calls. Both are planned to be detected by the testability analyzer.
+* A mock that is never verified checks only the undeclared calls; a forgotten `verify( )` is
+  planned to be detected by the testability analyzer.
 * `raises( )` accepts exceptions the method declares and `CX_NO_CHECK` ones; an undeclared
   `CX_DYNAMIC_CHECK` exception is rejected, although ABAP would allow it.
 
@@ -537,7 +549,7 @@ refactoring in ADT does not update them.
 * Test code only — `ZCL_ATK` is `FOR TESTING`, so production code cannot depend on it
 * Clean Code following the [Clean ABAP Style Guides](https://github.com/SAP/styleguides/blob/main/clean-abap/CleanABAP.md)
 * Modern ABAP syntax (7.58 / 9.14) — expressions, inline declarations, string templates
-* 149 unit tests of the library run with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, and off-stack on every push with the abaplint transpiler; abaplint on every push
+* 168 unit tests of the library run with ABAP Unit against the real `CL_ABAP_TESTDOUBLE`, and off-stack on every push with the abaplint transpiler; abaplint on every push
 * Documented with ABAP Doc on every public declaration
 
 # To-Do
@@ -554,8 +566,8 @@ already on `main` but not yet released is listed under **Unreleased** in
 2. **Testability analyzer** — an ATC check or abaplint rules that explain why a
    class is hard to test (`SELECT` in a method, `NEW` of dependencies, static
    calls, function modules) and how to fix each finding; it will also check the
-   method and parameter names in tests that use the library, and find spy checks
-   without `times( )` and mocks without `verify( )`
+   method and parameter names in tests that use the library, and find mocks
+   without `verify( )`
 3. **Koans** — red-to-green exercises built on the test doubles and the
    assertions
 
