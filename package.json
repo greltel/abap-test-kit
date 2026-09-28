@@ -22,8 +22,8 @@
   },
   "devDependencies": {
     "@abaplint/cli": "^2.120.59",
-    "@abaplint/runtime": "^2.13.92",
-    "@abaplint/transpiler-cli": "^2.13.92",
+    "@abaplint/runtime": "^2.13.93",
+    "@abaplint/transpiler-cli": "^2.13.93",
     "rimraf": "^6.0.1"
   }
 }
