@@ -14,7 +14,7 @@ import path from "path";
 import {fileURLToPath} from "url";
 
 const REPOSITORY = "https://github.com/open-abap/open-abap-core.git";
-const PINNED_COMMIT = "3f22182feb3ac9ffa6d4178e147961df084a6271"; // 2026-09-24
+const PINNED_COMMIT = "9cd1290ea04241dcd8d6232f184d287f1af42447"; // 2026-10-06
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const target = path.resolve(here, "..", "deps", "open-abap-core");
