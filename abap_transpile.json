@@ -104,11 +104,6 @@
         "object": "ZCL_ATK",
         "class": "LTC_PARAMETER_SHAPES",
         "method": "GIVEN_LEFT_OUT_INITIAL_UNMET"
-      },
-      {
-        "object": "ZCL_ATK",
-        "class": "LTC_PARAMETER_SHAPES",
-        "method": "GIVEN_SORTED_TABLE_ANY_ORDER"
       }
     ]
   }
