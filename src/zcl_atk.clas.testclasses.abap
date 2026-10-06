@@ -769,7 +769,6 @@ CLASS ltc_stub IMPLEMENTATION.
 
 
   METHOD when_unmatched_names_caller.
-    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
     MESSAGE e233(zatk) INTO DATA(called_from).
     stub->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '4711' )->returns(
         VALUE zif_atk_test_orders=>ty_order( customer = `ACME` ) ).
@@ -1493,7 +1492,6 @@ CLASS ltc_spy IMPLEMENTATION.
 
 
   METHOD when_unwanted_names_caller.
-    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
     MESSAGE e232(zatk) INTO DATA(from).
     audit_log->write( order_id = '4711' action = `CANCELLED` ).
 
@@ -1993,7 +1991,6 @@ ENDCLASS.
 CLASS ltc_call_site IMPLEMENTATION.
 
   METHOD when_asked_then_names_caller.
-    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
     DATA(origin) = lcl_call_site=>of_current_call( ).
 
     cl_abap_unit_assert=>assert_true( act = xsdbool( origin CS `ZCL_ATK=>WHEN_ASKED_THEN_NAMES_CALLER` )
