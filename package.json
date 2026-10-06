@@ -21,9 +21,9 @@
     "ci": "npm run lint && npm test"
   },
   "devDependencies": {
-    "@abaplint/cli": "^2.120.65",
-    "@abaplint/runtime": "^2.13.96",
-    "@abaplint/transpiler-cli": "^2.13.96",
+    "@abaplint/cli": "^2.120.70",
+    "@abaplint/runtime": "^2.13.100",
+    "@abaplint/transpiler-cli": "^2.13.100",
     "rimraf": "^6.0.1"
   }
 }
