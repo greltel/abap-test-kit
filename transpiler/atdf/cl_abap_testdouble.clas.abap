@@ -1,5 +1,6 @@
 "! Off-stack stand-in for SAP's CL_ABAP_TESTDOUBLE, used only by the abaplint transpiler.
 "! The behaviour lives in atdf_runtime.mjs next to this file; the @KERNEL lines delegate to it.
+"! transpiler/setup.mjs loads it into globalThis.atdfRuntime, so no path depends on the output layout.
 "! Never imported by abapGit (its starting folder is /src/), never seen by abaplint
 "! (abaplint.json reads /abaplint-stubs/ for the signature).
 CLASS cl_abap_testdouble DEFINITION PUBLIC FINAL CREATE PRIVATE FOR TESTING.
@@ -23,19 +24,19 @@ ENDCLASS.
 CLASS cl_abap_testdouble IMPLEMENTATION.
 
   METHOD create.
-    WRITE '@KERNEL const atdf = await import(new URL("../transpiler/atdf/atdf_runtime.mjs", import.meta.url));'.
+    WRITE '@KERNEL const atdf = globalThis.atdfRuntime;'.
     WRITE '@KERNEL $double.set(await atdf.create(object_name));'.
   ENDMETHOD.
 
 
   METHOD configure_call.
-    WRITE '@KERNEL const atdf = await import(new URL("../transpiler/atdf/atdf_runtime.mjs", import.meta.url));'.
+    WRITE '@KERNEL const atdf = globalThis.atdfRuntime;'.
     WRITE '@KERNEL configuration.set(await atdf.configureCall($double));'.
   ENDMETHOD.
 
 
   METHOD verify_expectations.
-    WRITE '@KERNEL const atdf = await import(new URL("../transpiler/atdf/atdf_runtime.mjs", import.meta.url));'.
+    WRITE '@KERNEL const atdf = globalThis.atdfRuntime;'.
     WRITE '@KERNEL await atdf.verifyExpectations($double);'.
   ENDMETHOD.
 
