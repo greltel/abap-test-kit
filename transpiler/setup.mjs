@@ -51,41 +51,6 @@ function distance(input) {
 }
 
 /*
- * Gap of @abaplint/runtime: "numc = decfloat34" (and numc against p / f) compares the
- * strings "0000004711" and "4711" instead of the numbers. ABAP compares numerically.
- * ATK relies on that in lcl_value_conversion=>is_same_value.
- */
-function numericValue(value) {
-  const types = globalThis.abap.types;
-  if (value instanceof types.Numc) {
-    return parseInt(value.get(), 10) || 0;
-  }
-  if (value instanceof types.DecFloat34 || value instanceof types.Float) {
-    return value.getRaw();
-  }
-  if (value instanceof types.Packed || value instanceof types.Integer) {
-    return value.get();
-  }
-  return undefined;
-}
-
-function patchNumcComparison(abap) {
-  const types = abap.types;
-  const original = abap.compare.eq;
-  const isDecimal = (v) => v instanceof types.DecFloat34 || v instanceof types.Float || v instanceof types.Packed;
-  const eq = (left, right) => {
-    const l = left instanceof types.FieldSymbol ? left.getPointer() : left;
-    const r = right instanceof types.FieldSymbol ? right.getPointer() : right;
-    if ((l instanceof types.Numc && isDecimal(r)) || (r instanceof types.Numc && isDecimal(l))) {
-      return numericValue(l) === numericValue(r);
-    }
-    return original(left, right);
-  };
-  // abap.compare is a module namespace with read-only bindings, so it is replaced as a whole
-  abap.compare = Object.assign({}, abap.compare, {eq, ne: (left, right) => !eq(left, right)});
-}
-
-/*
  * Gap of @abaplint/runtime: "IS INSTANCE OF <interface>" is a plain JavaScript instanceof,
  * which is false for every object because no class extends an interface. This checks the
  * IMPLEMENTED_INTERFACES of the object's class and of its super classes instead.
@@ -107,20 +72,6 @@ function patchInstanceOf(abap) {
   abap.compare = Object.assign({}, abap.compare, {instance_of});
 }
 
-/*
- * Gap of @abaplint/transpiler: a parameter typed with the generic p (TYPE p without a length)
- * is emitted as "new abap.types.typeTodoPGenericType()", a constructor that does not exist.
- * A packed number that keeps 14 decimals stands in for it, so that a value with decimals
- * survives the call; ATK compares it numerically with the value of the test.
- */
-function patchGenericPacked(abap) {
-  if (abap.types.typeTodoPGenericType === undefined) {
-    abap.types.typeTodoPGenericType = function() {
-      return new abap.types.Packed({length: 16, decimals: 14});
-    };
-  }
-}
-
 /** runs before any ABAP object is loaded */
 export async function setup(abap) {
   // CL_ABAP_TESTDOUBLE (atdf/) delegates to this module. Resolved relative to this file, as the
@@ -129,9 +80,7 @@ export async function setup(abap) {
   if (abap.builtin.distance === undefined) {
     abap.builtin.distance = distance;
   }
-  patchNumcComparison(abap);
   patchInstanceOf(abap);
-  patchGenericPacked(abap);
 }
 
 /*
@@ -144,24 +93,8 @@ const LOCAL_ENUMS = [
   {owner: "CLAS-ZCL_ATK-LIF_ROLE", prefix: "lif_role$", members: ["dummy", "stub", "spy", "mock"]},
 ];
 
-/*
- * Gap of @abaplint/transpiler: an interface that includes other interfaces (INTERFACES inside
- * an INTERFACE) is emitted without IMPLEMENTED_INTERFACES and without the component methods,
- * so open-abap's RTTI reports no component interfaces and the ATDF stand-in cannot build the
- * component methods. Keep this list in sync with the fixtures in src/test/.
- */
-const INTERFACE_COMPONENTS = [
-  {interface: "ZIF_ATK_TEST_ARCHIVE", includes: ["ZIF_ATK_TEST_AUDIT_LOG"]},
-];
-
 /** runs after every ABAP object is loaded, before the tests */
 export async function afterLoad() {
-  for (const definition of INTERFACE_COMPONENTS) {
-    const owner = globalThis.abap.Classes[definition.interface];
-    if (owner !== undefined && (owner.IMPLEMENTED_INTERFACES ?? []).length === 0) {
-      owner.IMPLEMENTED_INTERFACES = [...definition.includes];
-    }
-  }
   for (const definition of LOCAL_ENUMS) {
     const owner = globalThis.abap.Classes[definition.owner];
     if (owner === undefined) {
