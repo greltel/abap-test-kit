@@ -1,40 +1,57 @@
 /*
- * Fetches open-abap-core (the ABAP side of the transpiler runtime) into deps/open-abap-core
- * at the commit pinned below, so that every transpile - local or CI - builds against the
- * same revision the patches in transpiler/open-abap-patches were written for.
+ * Fetches the ABAP side of the transpiler runtime into deps/ at the commits pinned below,
+ * so that every transpile - local or CI - builds against the same revisions:
+ *   - open-abap-core: the SAP standard classes (RTTI, ABAP Unit, ...)
+ *   - open-abap-xco:  the XCO classes ATK reads the call stack with
  *
  *   node transpiler/fetch_open_abap_core.mjs
  *
- * To move to a newer revision: change PINNED_COMMIT, run this script, run the tests, and
- * re-check each patched file against its new upstream version.
+ * To move to a newer revision: change the pinned commit, run this script and run the tests.
  */
 import {execSync} from "child_process";
 import fs from "fs";
 import path from "path";
 import {fileURLToPath} from "url";
 
-const REPOSITORY = "https://github.com/open-abap/open-abap-core.git";
-const PINNED_COMMIT = "9cd1290ea04241dcd8d6232f184d287f1af42447"; // 2026-10-06
+const DEPENDENCIES = [
+  {
+    name: "open-abap-core",
+    repository: "https://github.com/open-abap/open-abap-core.git",
+    commit: "8b2ad62ca3a684fcddad4f6f9c7632dca66b06cc", // 2026-10-08
+  },
+  {
+    name: "open-abap-xco",
+    repository: "https://github.com/open-abap/open-abap-xco.git",
+    commit: "1bd58800c12e7abd051ec79ef9420f2e1098d5f4", // 2026-10-06
+  },
+];
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const target = path.resolve(here, "..", "deps", "open-abap-core");
 
 function git(args, cwd) {
   return execSync(`git ${args}`, {cwd, stdio: ["ignore", "pipe", "inherit"]}).toString().trim();
 }
 
-if (fs.existsSync(path.join(target, ".git"))) {
-  if (git("rev-parse HEAD", target) === PINNED_COMMIT) {
-    console.log(`open-abap-core already at ${PINNED_COMMIT.slice(0, 12)}`);
-    process.exit(0);
+function fetchDependency({name, repository, commit}) {
+  const target = path.resolve(here, "..", "deps", name);
+
+  if (fs.existsSync(path.join(target, ".git"))) {
+    if (git("rev-parse HEAD", target) === commit) {
+      console.log(`${name} already at ${commit.slice(0, 12)}`);
+      return;
+    }
+    console.log(`${name} is at another revision, refreshing`);
+    fs.rmSync(target, {recursive: true, force: true});
   }
-  console.log("open-abap-core is at another revision, refreshing");
-  fs.rmSync(target, {recursive: true, force: true});
+
+  fs.mkdirSync(target, {recursive: true});
+  git("init --quiet", target);
+  git(`remote add origin ${repository}`, target);
+  git(`fetch --quiet --depth 1 origin ${commit}`, target);
+  git("checkout --quiet FETCH_HEAD", target);
+  console.log(`${name} fetched at ${commit.slice(0, 12)}`);
 }
 
-fs.mkdirSync(target, {recursive: true});
-git("init --quiet", target);
-git(`remote add origin ${REPOSITORY}`, target);
-git(`fetch --quiet --depth 1 origin ${PINNED_COMMIT}`, target);
-git("checkout --quiet FETCH_HEAD", target);
-console.log(`open-abap-core fetched at ${PINNED_COMMIT.slice(0, 12)}`);
+for (const dependency of DEPENDENCIES) {
+  fetchDependency(dependency);
+}
