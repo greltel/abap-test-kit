@@ -123,6 +123,9 @@ function patchGenericPacked(abap) {
 
 /** runs before any ABAP object is loaded */
 export async function setup(abap) {
+  // CL_ABAP_TESTDOUBLE (atdf/) delegates to this module. Resolved relative to this file, as the
+  // transpiler's output layout changes between versions (2.14 writes each lib to its own folder).
+  globalThis.atdfRuntime = await import("./atdf/atdf_runtime.mjs");
   if (abap.builtin.distance === undefined) {
     abap.builtin.distance = distance;
   }
