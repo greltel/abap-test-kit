@@ -121,6 +121,9 @@ CLASS cl_abap_objectdescr IMPLEMENTATION.
 
 * set methods
     WRITE '@KERNEL for (const a in p_object?.METHODS || []) {'.
+* PATCH (ATK): since @abaplint/transpiler 2.14 METHODS also holds the ALIASES of an interface
+* (entries with alias_for); like SAP's RTTI, an alias is not a method of its own
+    WRITE '@KERNEL   if (p_object.METHODS[a].alias_for !== undefined) { continue; }'.
     WRITE '@KERNEL   lv_name.set(a);'.
     APPEND INITIAL LINE TO descr->methods ASSIGNING <method>.
     <method>-name = lv_name.
