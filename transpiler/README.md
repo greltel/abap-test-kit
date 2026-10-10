@@ -22,10 +22,10 @@ CI: `.github/workflows/unit.yml`. Everything here is tooling; abapGit never impo
 
 | File | Purpose |
 |---|---|
-| `abap_transpile.json` (root) | Transpiler configuration: sources, libraries, setup hooks, skipped tests |
+| `abap_transpile.json` (root) | Transpiler configuration: sources, libraries, setup hook, skipped tests |
 | `fetch_open_abap_core.mjs` | Fetches open-abap-core and open-abap-xco into `deps/`, each at a pinned commit |
 | `run_unit_tests.mjs` | Test runner with a readable report and exit code 1 on failure |
-| `setup.mjs` | Runtime patches applied before (`setup`) and after (`afterLoad`) the ABAP objects load; also loads `atdf/atdf_runtime.mjs` into `globalThis.atdfRuntime` |
+| `setup.mjs` | Loads `atdf/atdf_runtime.mjs` into `globalThis.atdfRuntime` before the ABAP objects load |
 | `atdf/cl_abap_testdouble.clas.abap` | CL_ABAP_TESTDOUBLE for the transpiler; delegates to `atdf/atdf_runtime.mjs` |
 | `atdf/atdf_runtime.mjs` | JavaScript stand-in for the ABAP Test Double Framework |
 
@@ -53,18 +53,18 @@ the demo tests use:
 Not implemented: doubling classes, matchers, events, `set_parameter( )`. A test that needs
 them fails with `CX_ATD_EXCEPTION_CORE` and a message that names the missing feature.
 
-Once the pull request is merged: move the pin of open-abap-core, delete `atdf/` and the
-import of `atdf_runtime.mjs` in `setup.mjs`, and remove the `transpiler/atdf` and
-`abaplint-stubs` libraries from `abap_transpile.json` (open-abap-core then ships every object
-in `abaplint-stubs/`; abaplint keeps reading the folder). Then run the tests.
+Once the pull request is merged: move the pin of open-abap-core, delete `atdf/` and `setup.mjs`,
+remove `options.setup` and the `transpiler/atdf` and `abaplint-stubs` libraries from
+`abap_transpile.json` (open-abap-core then ships every object in `abaplint-stubs/`; abaplint keeps
+reading the folder), and remove the skipped test below. Then run the tests.
 
-## Runtime patches in `setup.mjs`
+## No runtime patches
 
-| Patch | Gap |
-|---|---|
-| `distance( )` built-in | not implemented in @abaplint/runtime |
-| `IS INSTANCE OF <interface>` | the runtime uses a JavaScript `instanceof`, false for every interface |
-| `LIF_ROLE` enum members get distinct values | the transpiler emits every `ENUM` member as an integer with no value, and references members of a local interface under a name it never defines. **Keep the member list in `setup.mjs` in sync with `LIF_ROLE` in `zcl_atk.clas.locals_imp.abap`.** |
+Since @abaplint/transpiler 2.14.3 the transpiler and its runtime cover everything ATK needs:
+`distance( )` (abaplint/transpiler#1982), `IS INSTANCE OF` an interface (#1979), distinct values
+of an `ENUM` without `STRUCTURE` (#1983), constants of a local interface used from another include
+(#1984), and a unit test runner that skips `FOR TESTING` helper classes (#1981). Keep
+`@abaplint/runtime` and `@abaplint/transpiler-cli` at 2.14.3 or later.
 
 ## Skipped tests
 
@@ -75,9 +75,6 @@ Listed under `options.skip` in `abap_transpile.json`; it runs on a real system.
 
 ## Known gaps worth reporting upstream
 
-1. `@abaplint/transpiler`: `TYPES BEGIN OF ENUM` members all get the initial value; members of
-   an enum in a local interface are emitted as `lif_x.lif_x$member` but referenced as `lif_x.member`.
-2. `@abaplint/transpiler`: `CALL METHOD var->(name)` does not escape a variable named like a
-   JavaScript reserved word (`double` became `double.get()` while the parameter is `$double`).
-   ATK renamed the private parameter to `atdf_double` to work around it.
-3. `@abaplint/runtime`: `distance( )` and `IS INSTANCE OF` an interface.
+- `@abaplint/transpiler`: `CALL METHOD var->(name)` does not escape a variable named like a
+  JavaScript reserved word (`double` becomes `double.get()` while the parameter is `$double`;
+  still the case in 2.14.3). ATK named the private parameter `atdf_double` to work around it.
