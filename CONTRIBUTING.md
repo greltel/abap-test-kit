@@ -32,8 +32,7 @@ first.
 | `src/` | `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
 | `src/test/` | `ZATK_TEST` | Interfaces and an exception used by the unit tests of `ZCL_ATK` |
 | `src/demo/` | `ZATK_DEMO` | The order service of the [Before and After](README.md#before-and-after) section, tested once with the classic framework and once with the library |
-| `abaplint-stubs/` | - | Minimal definitions of SAP objects for abaplint and the transpiler; abapGit ignores the folder |
-| `transpiler/` | - | Off-stack test runner: ATDF stand-in, fetch of open-abap-core and open-abap-xco (see [transpiler/README.md](transpiler/README.md)) |
+| `transpiler/` | - | Off-stack test runner: fetch of open-abap-core and open-abap-xco, readable test report (see [transpiler/README.md](transpiler/README.md)) |
 | `.github/workflows/` | - | abaplint and the off-stack unit tests on every push and pull request |
 
 abapGit uses the `PREFIX` folder logic, so the sub-packages are named after the
@@ -99,11 +98,10 @@ npm run lint
 
 abaplint downloads the definitions of the SAP standard objects from
 [abaplint/deps](https://github.com/abaplint/deps). The test double framework
-and ABAP Unit are not part of them, so `abaplint-stubs/` holds minimal
-definitions of `CL_ABAP_TESTDOUBLE`, the `IF_ABAP_TESTDOUBLE_*` interfaces,
-`CX_ATD_EXCEPTION_CORE`, `CL_ABAP_UNIT_ASSERT` and `IF_ABAP_UNIT_CONSTANT`.
-When the library uses a method of these objects that is not stubbed yet, add
-it to the stub with the signature from ADT.
+and ABAP Unit are not part of them; abaplint takes those from
+[open-abap-core](https://github.com/open-abap/open-abap-core), which
+`npm run lint` fetches into `deps/` at the commit pinned in
+`transpiler/fetch_open_abap_core.mjs` (see [transpiler/README.md](transpiler/README.md)).
 
 The configuration follows the Clean ABAP style guide, so the rules that
 enforce Hungarian prefixes are switched off, and so are:
