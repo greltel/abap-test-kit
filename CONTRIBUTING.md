@@ -33,7 +33,7 @@ first.
 | `src/test/` | `ZATK_TEST` | Interfaces and an exception used by the unit tests of `ZCL_ATK` |
 | `src/demo/` | `ZATK_DEMO` | The order service of the [Before and After](README.md#before-and-after) section, tested once with the classic framework and once with the library |
 | `abaplint-stubs/` | - | Minimal definitions of SAP objects for abaplint and the transpiler; abapGit ignores the folder |
-| `transpiler/` | - | Off-stack test runner: ATDF stand-in, runtime patches, fetch of open-abap-core and open-abap-xco (see [transpiler/README.md](transpiler/README.md)) |
+| `transpiler/` | - | Off-stack test runner: ATDF stand-in, fetch of open-abap-core and open-abap-xco (see [transpiler/README.md](transpiler/README.md)) |
 | `.github/workflows/` | - | abaplint and the off-stack unit tests on every push and pull request |
 
 abapGit uses the `PREFIX` folder logic, so the sub-packages are named after the
