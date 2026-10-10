@@ -4,11 +4,11 @@
   "output_folder": "output",
   "libs": [
     {
-      "folder": "deps/open-abap-core",
+      "folder": "node_modules/open-abap-core",
       "files": "/src/**/*.*"
     },
     {
-      "folder": "deps/open-abap-xco",
+      "folder": "node_modules/open-abap-xco",
       "files": "/src/**/*.*"
     }
   ],
