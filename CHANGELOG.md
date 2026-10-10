@@ -13,7 +13,8 @@ All notable changes to this repository are listed here. Versions follow
 - Off-stack toolchain: the unit tests and abaplint use `CL_ABAP_TESTDOUBLE` and ABAP Unit of
   open-abap-core; the ATDF stand-in, the runtime patches and `abaplint-stubs/` are gone, and
   no test is skipped off-stack any more. Needs `@abaplint/transpiler-cli` and
-  `@abaplint/runtime` 2.14.3 or later.
+  `@abaplint/runtime` 2.14.3 or later. open-abap-core and open-abap-xco are development
+  dependencies in `package.json`, pinned to a commit.
 
 ## [1.1.0] - 2026-09-27
 
