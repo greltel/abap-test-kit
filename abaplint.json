@@ -11,8 +11,9 @@
       "files": "/src/**/*.*"
     },
     {
-      "folder": "/abaplint-stubs",
-      "files": "/**/*.abap"
+      "url": "https://github.com/open-abap/open-abap-core",
+      "folder": "/deps/open-abap-core",
+      "files": "/src/**/*.*"
     }
   ],
   "syntax": {
