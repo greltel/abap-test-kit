@@ -34,8 +34,7 @@
     "unknownTypes": "compileError",
     "setup": {
       "filename": "../transpiler/setup.mjs",
-      "preFunction": "setup",
-      "postFunction": "afterLoad"
+      "preFunction": "setup"
     },
     "skip": [
       {
