@@ -12,9 +12,10 @@ library is described in the [README](README.md).
 4. [Coding rules](#coding-rules)
 5. [Static checks](#static-checks)
 6. [Unit tests](#unit-tests)
-7. [How it works inside](#how-it-works-inside)
-8. [Test double framework behaviors the library relies on](#test-double-framework-behaviors-the-library-relies-on)
-9. [Releasing](#releasing)
+7. [Off-stack unit tests](#off-stack-unit-tests)
+8. [How it works inside](#how-it-works-inside)
+9. [Test double framework behaviors the library relies on](#test-double-framework-behaviors-the-library-relies-on)
+10. [Releasing](#releasing)
 
 # Reporting issues
 
@@ -32,7 +33,7 @@ first.
 | `src/` | `ZATK` | The library: `ZCL_ATK`, the `ZIF_ATK_*` interfaces, `ZCX_ATK` and message class `ZATK` |
 | `src/test/` | `ZATK_TEST` | Interfaces and an exception used by the unit tests of `ZCL_ATK` |
 | `src/demo/` | `ZATK_DEMO` | The order service of the [Before and After](README.md#before-and-after) section, tested once with the classic framework and once with the library |
-| `transpiler/` | - | Off-stack test runner: fetch of open-abap-core and open-abap-xco, readable test report (see [transpiler/README.md](transpiler/README.md)) |
+| `transpiler/` | - | Runner of the off-stack unit tests (see [Off-stack unit tests](#off-stack-unit-tests)) |
 | `.github/workflows/` | - | abaplint and the off-stack unit tests on every push and pull request |
 
 abapGit uses the `PREFIX` folder logic, so the sub-packages are named after the
@@ -99,9 +100,9 @@ npm run lint
 abaplint downloads the definitions of the SAP standard objects from
 [abaplint/deps](https://github.com/abaplint/deps). The test double framework
 and ABAP Unit are not part of them; abaplint takes those from
-[open-abap-core](https://github.com/open-abap/open-abap-core), which
-`npm run lint` fetches into `deps/` at the commit pinned in
-`transpiler/fetch_open_abap_core.mjs` (see [transpiler/README.md](transpiler/README.md)).
+[open-abap-core](https://github.com/open-abap/open-abap-core), which `npm ci`
+installs into `node_modules/` at the commit pinned in `package.json` (see
+[Off-stack unit tests](#off-stack-unit-tests)).
 
 The configuration follows the Clean ABAP style guide, so the rules that
 enforce Hungarian prefixes are switched off, and so are:
@@ -160,8 +161,57 @@ Not covered by tests, checked by review: the translation of an exception of
 deterministically.
 
 The same tests run off-stack on every push, transpiled to JavaScript; see
-[transpiler/README.md](transpiler/README.md) for what is stubbed or patched
-there and which tests only run on a real system.
+[Off-stack unit tests](#off-stack-unit-tests).
+
+# Off-stack unit tests
+
+The unit tests also run without an SAP system, on every push and pull request
+(`.github/workflows/unit.yml`): the sources are transpiled to JavaScript with
+the [abaplint transpiler](https://github.com/abaplint/transpiler) and run on
+Node.js against [open-abap-core](https://github.com/open-abap/open-abap-core),
+the open-source implementation of the SAP standard classes, `CL_ABAP_TESTDOUBLE`
+and `CL_ABAP_UNIT_ASSERT` among them, and
+[open-abap-xco](https://github.com/open-abap/open-abap-xco) for the XCO call
+stack.
+
+```sh
+npm ci                  # toolchain, open-abap-core and open-abap-xco
+npm test                # transpile, run every ABAP Unit test
+npm run unit            # run again without transpiling
+npm run unit:verbose
+node transpiler/run_unit_tests.mjs --filter LTC_STUB --verbose
+```
+
+| File | Purpose |
+|---|---|
+| `abap_transpile.json` | Transpiler configuration: sources and libraries |
+| `transpiler/run_unit_tests.mjs` | Test runner: runs every test, prints the ABAP exception text of a failure, exits with 1 if any test failed. The generated `output/index.mjs` stops at the first failure and prints no ABAP text |
+
+open-abap-core and open-abap-xco are development dependencies in
+`package.json`, each pinned to a commit (`github:open-abap/open-abap-core#<commit>`)
+and locked in `package-lock.json`, so `npm ci` puts them into `node_modules/`.
+The transpiler reads them from there, and so does abaplint (`abaplint.json`);
+the abaplint app on pull requests has no `node_modules/` and clones the
+current open-abap-core instead. To move to a newer commit, change it in
+`package.json`, run `npm install` (it updates `package-lock.json`) and
+`npm run ci`.
+
+`@abaplint/runtime` and `@abaplint/transpiler-cli` must be 2.14.3 or later:
+that release covers everything the library needs, so there are no runtime
+patches - `distance( )` (abaplint/transpiler#1982), `IS INSTANCE OF` an
+interface (#1979), distinct values of an `ENUM` without `STRUCTURE` (#1983),
+constants of a local interface used from another include (#1984), and a unit
+test runner that skips `FOR TESTING` helper classes (#1981).
+
+**Skipped tests.** None. A test that cannot run off-stack goes under
+`options.skip` in `abap_transpile.json`, with the reason here; it still has to
+pass on a real system.
+
+**Known gaps worth reporting upstream.** `@abaplint/transpiler`:
+`CALL METHOD var->(name)` does not escape a variable named like a JavaScript
+reserved word (`double` becomes `double.get()` while the parameter is
+`$double`; still the case in 2.14.3). The library named the private parameter
+`atdf_double` to work around it.
 
 # How it works inside
 
@@ -245,7 +295,7 @@ To make a release:
 1. Make sure abaplint and the off-stack unit tests are green on `main`
    (both workflows), and run the unit tests of `ZATK` and its sub-packages on
    a real system: every test must pass, including the ones the transpiler
-   skips (`transpiler/README.md`, *Skipped tests*).
+   skips (*Skipped tests* in [Off-stack unit tests](#off-stack-unit-tests)).
 2. In [CHANGELOG.md](CHANGELOG.md), rename **Unreleased** to the new version
    and date (`## [1.0.0] - 2026-10-15`) and start a new, empty **Unreleased**
    section above it. Set the same version in `package.json`.
