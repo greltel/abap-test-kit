@@ -1,7 +1,7 @@
 /*
  * Fetches the ABAP side of the transpiler runtime into deps/ at the commits pinned below,
  * so that every transpile - local or CI - builds against the same revisions:
- *   - open-abap-core: the SAP standard classes (RTTI, ABAP Unit, ...)
+ *   - open-abap-core: the SAP standard classes (RTTI, ABAP Unit, the ABAP Test Double Framework, ...)
  *   - open-abap-xco:  the XCO classes ATK reads the call stack with
  *
  *   node transpiler/fetch_open_abap_core.mjs
@@ -17,7 +17,7 @@ const DEPENDENCIES = [
   {
     name: "open-abap-core",
     repository: "https://github.com/open-abap/open-abap-core.git",
-    commit: "8b2ad62ca3a684fcddad4f6f9c7632dca66b06cc", // 2026-10-08
+    commit: "0c495ec0d059be72adc76b97848c6cc5ad8a1fe8", // 2026-10-10, with CL_ABAP_TESTDOUBLE (#1296)
   },
   {
     name: "open-abap-xco",
