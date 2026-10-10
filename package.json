@@ -12,9 +12,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "npm run deps && abaplint abaplint.json",
-    "deps": "node transpiler/fetch_open_abap_core.mjs",
-    "transpile": "npm run deps && rimraf output && abap_transpile abap_transpile.json",
+    "lint": "abaplint abaplint.json",
+    "transpile": "rimraf output && abap_transpile abap_transpile.json",
     "unit": "node transpiler/run_unit_tests.mjs",
     "unit:verbose": "node transpiler/run_unit_tests.mjs --verbose",
     "test": "npm run transpile && npm run unit",
@@ -24,6 +23,8 @@
     "@abaplint/cli": "^2.120.72",
     "@abaplint/runtime": "^2.14.3",
     "@abaplint/transpiler-cli": "^2.14.3",
+    "open-abap-core": "github:open-abap/open-abap-core#0c495ec0d059be72adc76b97848c6cc5ad8a1fe8",
+    "open-abap-xco": "github:open-abap/open-abap-xco#1bd58800c12e7abd051ec79ef9420f2e1098d5f4",
     "rimraf": "^6.0.1"
   }
 }
