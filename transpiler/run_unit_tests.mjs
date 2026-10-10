@@ -1,13 +1,9 @@
 /*
- * Runs the transpiled ABAP Unit tests and prints a readable report.
- *
- *   node transpiler/run_unit_tests.mjs [--filter <text>] [--verbose]
- *
  * Why not the generated output/index.mjs? It stops at the first failure and shows the
  * JavaScript error object instead of the ABAP message. This runner reads the test list the
- * transpiler generated, runs every test with the KERNEL_UNIT_RUNNER of open-abap-core, prints
- * the ABAP exception text for tests that raised, and exits with 1 if any test failed.
- */
+ * transpiler generated, runs setup, the test method and teardown of every test itself, prints
+ * the ABAP message of a failure, and exits with 1 if any test failed.
+*/
 import fs from "fs";
 import path from "path";
 import {fileURLToPath} from "url";
