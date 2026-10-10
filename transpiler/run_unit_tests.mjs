@@ -1,9 +1,13 @@
 /*
+ * Runs the transpiled ABAP Unit tests and prints a readable report.
+ *
+ *   node transpiler/run_unit_tests.mjs [--filter <text>] [--verbose]
+ *
  * Why not the generated output/index.mjs? It stops at the first failure and shows the
  * JavaScript error object instead of the ABAP message. This runner reads the test list the
  * transpiler generated, runs setup, the test method and teardown of every test itself, prints
- * the ABAP message of a failure, and exits with 1 if any test failed.
-*/
+ * the ABAP message of a failure, and exits with 1 if any test failed or no test ran.
+ */
 import fs from "fs";
 import path from "path";
 import {fileURLToPath} from "url";
@@ -116,7 +120,12 @@ async function run() {
   }
 
   console.log(`\n${passed} passed, ${failed} failed, ${passed + failed} total`);
-  process.exit(failed === 0 ? 0 : 1);
+  if (passed + failed === 0) {
+    // a green run without tests would hide that the test list could not be read
+    console.log(filter === "" ? "No tests ran: the test list in output/index.mjs was not found"
+                              : `No tests ran: nothing matches --filter ${filter}`);
+  }
+  process.exit(failed === 0 && passed > 0 ? 0 : 1);
 }
 
 run().catch(error => {
