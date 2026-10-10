@@ -433,6 +433,13 @@ CLASS lcl_doubled_method DEFINITION FINAL.
                  decimals      TYPE i VALUE 0,
                END OF generic_fallback.
 
+    TYPES:
+      "! An argument as ATDF passes it, before ATK copies the value
+      BEGIN OF ty_atdf_argument,
+        is_supplied TYPE abap_bool,
+        source      TYPE REF TO data,
+      END OF ty_atdf_argument.
+
     DATA method_naming TYPE ty_naming.
     DATA parameter_list TYPE ty_parameters.
     DATA declared_exceptions TYPE abap_excpdescr_tab.
@@ -469,6 +476,13 @@ CLASS lcl_doubled_method DEFINITION FINAL.
       IMPORTING atdf_arguments TYPE REF TO if_abap_testdouble_arguments
                 parameter      TYPE ty_parameter
       RETURNING VALUE(result)  TYPE lcl_arguments=>ty_argument.
+
+    "! Whether the caller passed the parameter and, if so, the reference ATDF holds for its
+    "! argument. Whatever ATDF raises arrives as ZCX_ATK.
+    METHODS read_atdf_argument
+      IMPORTING atdf_arguments TYPE REF TO if_abap_testdouble_arguments
+                parameter      TYPE ty_parameter
+      RETURNING VALUE(result)  TYPE ty_atdf_argument.
 
     "! Whether the caller passed the parameter; a mandatory parameter is always supplied.
     METHODS is_supplied
@@ -1774,17 +1788,26 @@ CLASS lcl_doubled_method IMPLEMENTATION.
 
 
   METHOD read_argument.
-    DATA source TYPE REF TO data.
+    DATA(atdf_argument) = read_atdf_argument( atdf_arguments = atdf_arguments
+                                              parameter      = parameter ).
+    result = VALUE #( name        = parameter-name
+                      is_supplied = atdf_argument-is_supplied
+                      value       = copy_of( source    = atdf_argument-source
+                                             parameter = parameter ) ).
+  ENDMETHOD.
 
-    result-name = parameter-name.
+
+  METHOD read_atdf_argument.
     TRY.
         " a parameter the caller left out is not read: its value stays initial
         result-is_supplied = is_supplied( atdf_arguments = atdf_arguments
                                           parameter      = parameter ).
-        IF result-is_supplied = abap_true AND parameter-kind = cl_abap_objectdescr=>changing.
-          source = atdf_arguments->get_param_changing( parameter-name ).
-        ELSEIF result-is_supplied = abap_true.
-          source = atdf_arguments->get_param_importing( parameter-name ).
+        IF result-is_supplied = abap_false.
+          RETURN.
+        ELSEIF parameter-kind = cl_abap_objectdescr=>changing.
+          result-source = atdf_arguments->get_param_changing( parameter-name ).
+        ELSE.
+          result-source = atdf_arguments->get_param_importing( parameter-name ).
         ENDIF.
       CATCH cx_root INTO DATA(error).
         " ATDF exceptions are not released for ABAP Cloud; whatever arrives becomes ZCX_ATK
@@ -1793,8 +1816,6 @@ CLASS lcl_doubled_method IMPLEMENTATION.
                                                          details = error->get_text( ) )
                                      previous = error ).
     ENDTRY.
-    result-value = copy_of( source    = source
-                            parameter = parameter ).
   ENDMETHOD.
 
 
