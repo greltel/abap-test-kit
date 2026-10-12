@@ -20,7 +20,7 @@
     "ci": "npm run lint && npm test"
   },
   "devDependencies": {
-    "@abaplint/cli": "^2.120.72",
+    "@abaplint/cli": "^2.120.75",
     "@abaplint/runtime": "^2.14.3",
     "@abaplint/transpiler-cli": "^2.14.3",
     "open-abap-core": "github:open-abap/open-abap-core#0c495ec0d059be72adc76b97848c6cc5ad8a1fe8",
