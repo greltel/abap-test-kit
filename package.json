@@ -14,8 +14,7 @@
   "scripts": {
     "lint": "abaplint abaplint.json",
     "transpile": "rimraf output && abap_transpile abap_transpile.json",
-    "unit": "node transpiler/run_unit_tests.mjs",
-    "unit:verbose": "node transpiler/run_unit_tests.mjs --verbose",
+    "unit": "node output/index.mjs",
     "test": "npm run transpile && npm run unit",
     "ci": "npm run lint && npm test"
   },
