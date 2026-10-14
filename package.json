@@ -19,9 +19,9 @@
     "ci": "npm run lint && npm test"
   },
   "devDependencies": {
-    "@abaplint/cli": "^2.120.75",
-    "@abaplint/runtime": "^2.14.3",
-    "@abaplint/transpiler-cli": "^2.14.3",
+    "@abaplint/cli": "^2.120.78",
+    "@abaplint/runtime": "^2.14.6",
+    "@abaplint/transpiler-cli": "^2.14.6",
     "open-abap-core": "github:open-abap/open-abap-core#0c495ec0d059be72adc76b97848c6cc5ad8a1fe8",
     "open-abap-xco": "github:open-abap/open-abap-xco#1bd58800c12e7abd051ec79ef9420f2e1098d5f4",
     "rimraf": "^6.0.1"
