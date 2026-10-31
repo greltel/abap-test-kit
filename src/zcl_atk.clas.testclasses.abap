@@ -325,7 +325,6 @@ CLASS ltc_component_interface IMPLEMENTATION.
 
 
   METHOD when_alias_then_same_method.
-    " needs alias_for from RTTI, which the transpiler does not emit (skipped in abap_transpile.json)
     DATA(described) = lcl_doubled_type=>describe( 'ZIF_ATK_TEST_ARCHIVE' ).
 
     DATA(record) = described->find_method( 'RECORD' ).
@@ -340,7 +339,6 @@ CLASS ltc_component_interface IMPLEMENTATION.
 
 
   METHOD when_alias_called_then_seen.
-    " needs alias_for from RTTI, which the transpiler does not emit (skipped in abap_transpile.json)
     archive->record( order_id = '4711' action = `ARCHIVED` ).
 
     spy->was_called( 'RECORD' )->with( parameter = 'ACTION' value = `ARCHIVED` )->times( 1 ).
@@ -769,7 +767,6 @@ CLASS ltc_stub IMPLEMENTATION.
 
 
   METHOD when_unmatched_names_caller.
-    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
     MESSAGE e233(zatk) INTO DATA(called_from).
     stub->when( 'GET_ORDER' )->with( parameter = 'ORDER_ID' value = '4711' )->returns(
         VALUE zif_atk_test_orders=>ty_order( customer = `ACME` ) ).
@@ -1197,8 +1194,7 @@ CLASS ltc_parameter_shapes IMPLEMENTATION.
 
   METHOD given_left_out_initial_unmet.
     " the recorded value of a parameter the caller left out is initial, but the method may have
-    " seen its DEFAULT; so not even a condition on the initial value is met. Off-stack the
-    " transpiler marks no parameter as optional (skipped in abap_transpile.json)
+    " seen its DEFAULT; so not even a condition on the initial value is met
     stub->when( 'GREET' )->with( parameter = 'SALUTATION' value = `` )->returns( `Ada` ).
 
     shapes->greet( `Ada` ).
@@ -1210,8 +1206,7 @@ CLASS ltc_parameter_shapes IMPLEMENTATION.
 
 
   METHOD given_sorted_table_any_order.
-    " the parameter is a sorted table; the test gives the rows as a standard table in another
-    " order. Off-stack a table created from the sorted description does not sort (skipped)
+    " the parameter is a sorted table; the test gives its rows as a standard table in another order
     DATA(unsorted) = VALUE string_table( ( `Grace` ) ( `Ada` ) ).
     stub->when( 'FIRST_NAME' )->with( parameter = 'NAMES' value = unsorted )->returns( `Ada` ).
 
@@ -1272,7 +1267,6 @@ CLASS ltc_parameter_shapes IMPLEMENTATION.
 
 
   METHOD given_generic_digits_works.
-    " off-stack the transpiler describes a generic n like N LENGTH 1 (skipped in abap_transpile.json)
     DATA digits TYPE n LENGTH 4 VALUE '4711'.
     stub->when( 'PAD' )->with( parameter = 'DIGITS' value = digits )->returns( `padded` ).
 
@@ -1493,7 +1487,6 @@ CLASS ltc_spy IMPLEMENTATION.
 
 
   METHOD when_unwanted_names_caller.
-    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
     MESSAGE e232(zatk) INTO DATA(from).
     audit_log->write( order_id = '4711' action = `CANCELLED` ).
 
@@ -1993,7 +1986,6 @@ ENDCLASS.
 CLASS ltc_call_site IMPLEMENTATION.
 
   METHOD when_asked_then_names_caller.
-    " needs the real call stack: off-stack the XCO stand-in has none (skipped in abap_transpile.json)
     DATA(origin) = lcl_call_site=>of_current_call( ).
 
     cl_abap_unit_assert=>assert_true( act = xsdbool( origin CS `ZCL_ATK=>WHEN_ASKED_THEN_NAMES_CALLER` )
