@@ -6,6 +6,10 @@ All notable changes to this repository are listed here. Versions follow
 
 ## Unreleased
 
+## [1.1.1] - 2026-10-31
+
+No change in behavior or public API; updating from 1.1.0 is a plain pull.
+
 ### Changed
 
 - README: section *The same mistake, both messages* - three mistakes made with
@@ -15,6 +19,14 @@ All notable changes to this repository are listed here. Versions follow
   no test is skipped off-stack any more. Needs `@abaplint/transpiler-cli` and
   `@abaplint/runtime` 2.14.3 or later. open-abap-core and open-abap-xco are development
   dependencies in `package.json`, pinned to a commit.
+- Internal: reading an argument from the test double framework and copying it into the
+  parameter type are separate steps in `lcl_doubled_method`.
+
+### Fixed
+
+- CONTRIBUTING and the comments of the unit tests no longer say that some tests run on a
+  system only: all 177 run off-stack as well. The release steps name the two version
+  entries of `package-lock.json`.
 
 ## [1.1.0] - 2026-09-27
 
