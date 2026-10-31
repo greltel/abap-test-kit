@@ -134,10 +134,10 @@ test needs a parameter shape that does not exist yet.
 | Test class | Covers |
 |---|---|
 | `ltc_doubled_type` | Only interfaces can be doubled; the messages for classes, data types and unknown types; name normalization, suggestions, static methods, the method names ATDF reports |
-| `ltc_component_interface` | Methods of a component interface, named with or without the prefix, with the prefix of the doubled interface or by an alias, routed and matched. The two alias tests need `alias_for` from RTTI and run on a system only |
+| `ltc_component_interface` | Methods of a component interface, named with or without the prefix, with the prefix of the doubled interface or by an alias, routed and matched |
 | `ltc_value_conversion` | Conversion of rule values to the parameter types, without loss, for inputs, outputs and RETURNING; the reason a value does not fit |
 | `ltc_stub` | Rules, matching order, strict stubs, one answer per rule, exceptions |
-| `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic (including the generic `c`, `n`, `p`, `x`), structure, table, sorted table, reference and optional parameters. `given_generic_digits_works`, `given_left_out_initial_unmet` and `given_sorted_table_any_order` run on a system only |
+| `ltc_parameter_shapes` | EXPORTING, CHANGING, RETURNING, generic (including the generic `c`, `n`, `p`, `x`), structure, table, sorted table, reference and optional parameters |
 | `ltc_spy` | `was_called( )`, `with( )` and `times( )` as checks of their own, `was_not_called( )`, their messages; a spy answers like a stub |
 | `ltc_mock` | `expect_call( )`, `verify( )`, undeclared and surplus calls, several expectations per method and which one takes a call, what the failure of an unmet expectation lists, answers of expectations |
 | `ltc_dummy` | Calls of a dummy |
@@ -145,7 +145,7 @@ test needs a parameter shape that does not exist yet.
 | `ltc_facade` | The entry points of `ZCL_ATK` |
 | `ltc_exception_text` | The three parts of a `ZCX_ATK` text, placeholders, the previous exception |
 | `ltc_arguments`, `ltc_name_hint`, `ltc_value_formatter`, `ltc_type_formatter`, `ltc_call_journal` | How arguments, name suggestions, values, types and recorded calls are shown in messages |
-| `ltc_call_site` | The origin of a call from the lines of the XCO call stack: which frame is the code under test, how a line is taken apart. `when_asked_then_names_caller` reads the real stack and runs on a system only |
+| `ltc_call_site` | The origin of a call from the lines of the XCO call stack: which frame is the code under test, how a line is taken apart; `when_asked_then_names_caller` reads the real stack |
 
 Failures that happen during the act step are reported through a local
 interface, so the tests replace the reporter with `ltd_failure_recorder` and
@@ -291,10 +291,12 @@ To make a release:
 
 1. Make sure abaplint and the off-stack unit tests are green on `main`
    (both workflows), and run the unit tests of `ZATK` and its sub-packages on
-   a real system: every test must pass, including the ones the transpiler
-   skips (*Skipped tests* in [Off-stack unit tests](#off-stack-unit-tests)).
+   a real system: every test must pass there too.
 2. In [CHANGELOG.md](CHANGELOG.md), rename **Unreleased** to the new version
-   and date (`## [1.0.0] - 2026-10-15`) and start a new, empty **Unreleased**
-   section above it. Set the same version in `package.json`.
-3. Commit, then tag the commit `vMAJOR.MINOR.PATCH` and push the tag.
-4. Create a GitHub release from the tag with the CHANGELOG section as text.
+   and date (`## [1.1.1] - 2026-10-31`) and start a new, empty **Unreleased**
+   section above it. Set the same version in `package.json` and in both
+   `"version"` entries at the top of `package-lock.json` (the root and
+   `packages[""]`); `npm ci` must still pass.
+3. Commit, and let both workflows finish green on that commit.
+4. Create a GitHub release with a new tag `vMAJOR.MINOR.PATCH` on that commit
+   and the CHANGELOG section as text.
